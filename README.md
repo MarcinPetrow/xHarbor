@@ -1,180 +1,125 @@
 # xHarbor
 
-xHarbor is an open source monorepo for managing software delivery teams.
+xHarbor is an open source platform for running software delivery teams. It combines team structure, planning, communication, reporting, and documentation into a single composable system built as a monorepo.
+
+It is positioned as an open alternative to fragmented delivery tooling. The goal is not to replace every workflow with one giant app, but to unify the core system boundaries that teams usually spread across separate products.
+
+## Why xHarbor
+
+Most delivery organizations operate across disconnected tools for identity, planning, communication, and documentation. That fragmentation creates duplicated data, unclear ownership, and weak runtime boundaries between systems.
+
+xHarbor aims to unify those concerns with shared domain models, shared contracts, and explicit module boundaries. Each application stays focused on its own job while still participating in one coherent platform.
+
+## Quick start
+
+Install dependencies and start the local web stack:
+
+```bash
+npm install
+npm run stack:start
+```
+
+To launch the native macOS client for `xTalk`:
+
+```bash
+swift run xtalk-macos
+```
+
+The stack launcher manages all Node APIs and web apps together.
 
 ## Platform modules
 
 ### xGroup
 
-`xGroup` is the source of truth for people, teams, memberships, invitations, sessions, and user identity metadata.
+`xGroup` is the source of truth for people, teams, memberships, invitations, and session-aware identity data.
 
-Current scope:
-
-- organization directory
-- teams and memberships
+Responsibilities:
+- organization and team directory
 - user lifecycle and status
-- invitations
+- memberships and invitations
 - session administration
-- user hover-card data model:
-  `firstName`, `lastName`, `nickname`, `department`, `title`, `managerUserID`
-
-Runtime:
-
-- `apps/xgroup-api`
-- `apps/xgroup-web`
 
 ### xBacklog
 
 `xBacklog` is the planning and execution module for projects and tasks. It consumes workspace structure from `xGroup`.
 
-Current scope:
-
-- projects owned by teams
-- task board with statuses `new -> in_progress -> done`
-- task detail with description, assignee, timestamps, comments, and history
+Responsibilities:
+- team-owned projects
+- task board with `new -> in_progress -> done`
+- task detail, comments, and change history
 - board filtering and drag-and-drop workflow
-- user hover-cards on assignees and comment authors
-
-Runtime:
-
-- `apps/xbacklog-api`
-- `apps/xbacklog-web`
 
 ### xDashboard
 
 `xDashboard` is the reporting surface for cross-module insights built from `xGroup` and `xBacklog`.
 
-Current scope:
-
+Responsibilities:
 - executive overview
-- team load
-- recent activity
-- recently completed work
-- risk views
-- user hover-cards in user, comment, and activity contexts
-
-Runtime:
-
-- `apps/xdashboard-api`
-- `apps/xdashboard-web`
+- team load and delivery activity
+- completed work and risk views
+- cross-module reporting snapshots
 
 ### xTalk
 
 `xTalk` is the communication module. It exists as both a web app and a native macOS client.
 
-Current scope:
-
+Responsibilities:
 - team rooms
 - direct conversations
-- unread state
-- mark-as-read actions
-- presence colors:
-  gray `offline`, amber `brb`, green `online`
-- automatic `brb` after 60 seconds of inactivity
-- shared visual and interaction model between web and native client
-- user hover-cards in the web client
-
-Runtime:
-
-- `apps/xtalk-api`
-- `apps/xtalk-web`
-- `apps/xtalk-macos`
+- unread state and mark-as-read actions
+- shared web and native chat experience
+- presence with automatic inactivity handling
 
 ### xDoc
 
-`xDoc` is the documentation workspace for structured Markdown pages, nested page trees, and edit history.
+`xDoc` is the documentation workspace for structured Markdown pages and revision history.
 
-Current scope:
+Responsibilities:
+- hierarchical page tree
+- Markdown authoring and preview
+- page-level revision history
+- author and editor traceability
 
-- markdown page authoring
-- parent/child page hierarchy
-- per-page revision history
-- author and last-editor metadata
-- workspace-wide revision timeline
-- user hover-cards on authors and editors
+## Architecture
 
-Runtime:
+xHarbor is a modular monorepo. Each domain module has its own API and web app. Modules share contracts and platform services where that reduces duplication without collapsing boundaries.
 
-- `apps/xdoc-api`
-- `apps/xdoc-web`
+`xTalk` also has a native macOS client implemented in Swift. The active backend and web runtime path is Node. Local persistence uses SQLite.
 
-## Target architecture
+## Design principles
 
-- `xGroup`: web + Node API
-- `xBacklog`: web + Node API
-- `xDashboard`: web + Node API
-- `xTalk`: web + native macOS client
-- `xDoc`: web + Node API
+- explicit domain boundaries
+- shared contracts across modules
+- minimal coupling between apps
+- local-first development experience
 
 ## Shared packages
 
-- `packages/contracts`: demo state, shared constants, and domain contract helpers
-- `packages/platform-auth`: authorization and permission checks
-- `packages/platform-session`: cookie-backed session handling and presence state
+- `packages/contracts`: shared demo state, constants, and contract helpers
+- `packages/platform-auth`: authorization rules and permission checks
+- `packages/platform-session`: session handling and presence state
 - `packages/sqlite-store`: SQLite-backed document persistence
 
-## Active runtime
+## Stack management
 
-The active implementation path is now Node-based monorepo workspaces.
-
-Current active modules:
-
-- `apps/xgroup-api`
-- `apps/xbacklog-api`
-- `apps/xdashboard-api`
-- `apps/xtalk-api`
-- `apps/xdoc-api`
-- `apps/xgroup-web`
-- `apps/xbacklog-web`
-- `apps/xdashboard-web`
-- `apps/xtalk-web`
-- `apps/xdoc-web`
-- `packages/contracts`
-- `packages/platform-auth`
-- `packages/platform-session`
-- `packages/sqlite-store`
-
-Web UI standard:
-
-- shared top navigation bar across all web apps
-- sign-in controls on the right side of the nav bar
-- shared visual shell and compact multi-view layout
-- shared UI preferences for accent palette and timezone
-- shared delayed user hover-card for user identity details
-
-Run:
-
-```bash
-npm install
-npm run dev:xgroup
-npm run dev:xbacklog
-npm run dev:xdashboard
-npm run dev:xtalk
-npm run dev:xdoc
-swift run xtalk-macos
-```
-
-Recommended local start:
-
-```bash
-npm install
-npm run stack:start
-swift run xtalk-macos
-```
-
-Local stack management:
+Start the full local web stack:
 
 ```bash
 npm run stack:start
+```
+
+Inspect or control the stack:
+
+```bash
 npm run stack:status
 npm run stack:logs
 npm run stack:stop
 npm run stack:restart
 ```
 
-The stack launcher manages all Node APIs and web apps together.
+## Full workspace management
 
-Full local workspace management, including native `xtalk-macos`:
+Manage the full workspace, including the native macOS client:
 
 ```bash
 npm run workspace:start
@@ -184,20 +129,26 @@ npm run workspace:stop
 npm run workspace:restart
 ```
 
-## Swift Scope
+## Optional native macOS client launch
 
-Swift remains in the repository only for the native `xtalk-macos` client and its shared `XTalkDomain`.
-Web and backend modules are implemented in the Node monorepo.
+Run the native `xTalk` client directly:
+
+```bash
+swift run xtalk-macos
+```
+
+Swift remains in the repository for the native `xtalk-macos` client and its shared `XTalkDomain`. Web and backend modules are implemented in the Node monorepo.
 
 ## Persistence
 
-Primary persistence for active web services now targets SQLite at `data/sqlite/xharbor.db`.
-Active runtime expects the current SQLite schema only.
+Primary local persistence uses SQLite at:
+
+`data/sqlite/xharbor.db`
 
 ## Repository layout
 
 - `apps/`: application entry points, APIs, web apps, and the native macOS client
-- `packages/`: shared libraries used by multiple apps
+- `packages/`: shared libraries used across modules
 - `Sources/`: Swift code for native `xTalk`
 - `Tests/`: Swift tests for the native client domain
 - `docs/`: product and architecture notes
