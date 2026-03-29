@@ -1,0 +1,84 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:xHarbor}",
+            "name": "Debug xHarbor",
+            "target": "xHarbor",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug xHarbor"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:xHarbor}",
+            "name": "Release xHarbor",
+            "target": "xHarbor",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release xHarbor"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:xHarbor}",
+            "name": "Debug xgroup-service",
+            "target": "xgroup-service",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug xgroup-service"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:xHarbor}",
+            "name": "Release xgroup-service",
+            "target": "xgroup-service",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release xgroup-service"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:xHarbor}",
+            "name": "Debug xbacklog-service",
+            "target": "xbacklog-service",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug xbacklog-service"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:xHarbor}",
+            "name": "Release xbacklog-service",
+            "target": "xbacklog-service",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release xbacklog-service"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:xHarbor}",
+            "name": "Debug xtalk-macos",
+            "target": "xtalk-macos",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug xtalk-macos"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:xHarbor}",
+            "name": "Release xtalk-macos",
+            "target": "xtalk-macos",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release xtalk-macos"
+        }
+    ]
+}

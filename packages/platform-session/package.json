@@ -1,0 +1,12 @@
+{
+  "name": "@xharbor/platform-session",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@xharbor/sqlite-store": "0.1.0"
+  },
+  "exports": {
+    ".": "./src/index.js"
+  }
+}

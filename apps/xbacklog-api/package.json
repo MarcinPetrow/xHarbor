@@ -1,0 +1,12 @@
+{
+  "name": "@xharbor/xbacklog-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@xharbor/contracts": "0.1.0",
+    "@xharbor/platform-auth": "0.1.0",
+    "@xharbor/platform-session": "0.1.0",
+    "@xharbor/sqlite-store": "0.1.0"
+  }
+}

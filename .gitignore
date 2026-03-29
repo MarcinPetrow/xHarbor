@@ -1,0 +1,11 @@
+node_modules
+npm-debug.log*
+*.log
+.DS_Store
+.env
+.env.*
+.build
+data/node
+data/sqlite
+data/legacy-json-backup
+.xharbor

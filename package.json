@@ -1,0 +1,30 @@
+{
+  "name": "xharbor",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:xgroup": "node apps/xgroup-api/src/server.js",
+    "dev:xgroup-web": "node apps/xgroup-web/src/server.js",
+    "dev:xbacklog": "node apps/xbacklog-api/src/server.js",
+    "dev:xbacklog-web": "node apps/xbacklog-web/src/server.js",
+    "dev:xdashboard": "node apps/xdashboard-api/src/server.js",
+    "dev:xdashboard-web": "node apps/xdashboard-web/src/server.js",
+    "dev:xtalk": "node apps/xtalk-api/src/server.js",
+    "dev:xtalk-web": "node apps/xtalk-web/src/server.js",
+    "stack:start": "node scripts/dev-stack.mjs start",
+    "stack:stop": "node scripts/dev-stack.mjs stop",
+    "stack:restart": "node scripts/dev-stack.mjs restart",
+    "stack:status": "node scripts/dev-stack.mjs status",
+    "stack:logs": "node scripts/dev-stack.mjs logs",
+    "workspace:start": "node scripts/dev-stack.mjs workspace-start",
+    "workspace:stop": "node scripts/dev-stack.mjs workspace-stop",
+    "workspace:restart": "node scripts/dev-stack.mjs workspace-restart",
+    "workspace:status": "node scripts/dev-stack.mjs workspace-status",
+    "workspace:logs": "node scripts/dev-stack.mjs workspace-logs",
+    "test": "node --test packages/*/test/*.test.js apps/*/test/*.test.js"
+  }
+}
