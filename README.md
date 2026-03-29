@@ -1,23 +1,11 @@
-<table width="100%">
-  <tr>
-    <td valign="middle" align="left">
-      <strong>xHarbor</strong>
-    </td>
-    <td valign="middle" align="right" width="260">
-      <p>
-        <strong>Powered by</strong>
-        <img src="./go_home.png" alt="Bold Merge" width="180" valign="middle">
-      </p>
-    </td>
-  </tr>
-  <tr>
-    <td colspan="2" valign="top" align="left">
-      <p>
-        xHarbor is an open source platform for running software delivery teams. It combines team structure, planning, communication, reporting, and documentation into a single composable system built as a monorepo.
-      </p>
-    </td>
-  </tr>
-</table>
+# xHarbor
+
+xHarbor is an open source platform for running software delivery teams. It combines team structure, planning, communication, reporting, and documentation into a single composable system built as a monorepo.
+
+<p>
+  <strong>Powered by</strong>
+  <img src="./go_home.png" alt="Bold Merge" width="180" valign="middle">
+</p>
 
 It is positioned as an open alternative to fragmented delivery tooling. The goal is not to replace every workflow with one giant app, but to unify the core system boundaries that teams usually spread across separate products.
 
