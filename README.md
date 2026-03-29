@@ -1,7 +1,7 @@
 <table width="100%">
   <tr>
     <td valign="middle" align="left">
-      <h1>xHarbor</h1>
+      <strong>xHarbor</strong>
     </td>
     <td valign="middle" align="right" width="260">
       <p>
