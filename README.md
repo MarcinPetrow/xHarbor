@@ -1,15 +1,19 @@
 <table width="100%">
   <tr>
-    <td valign="top" align="left">
+    <td valign="middle" align="left">
       <h1>xHarbor</h1>
-      <p>
-        xHarbor is an open source platform for running software delivery teams. It combines team structure, planning, communication, reporting, and documentation into a single composable system built as a monorepo.
-      </p>
     </td>
-    <td valign="top" align="right" width="220">
+    <td valign="middle" align="right" width="260">
       <p>
         <strong>Powered by</strong>
         <img src="./go_home.png" alt="Bold Merge" width="180" valign="middle">
+      </p>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" valign="top" align="left">
+      <p>
+        xHarbor is an open source platform for running software delivery teams. It combines team structure, planning, communication, reporting, and documentation into a single composable system built as a monorepo.
       </p>
     </td>
   </tr>
