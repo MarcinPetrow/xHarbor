@@ -223,12 +223,14 @@ function revisionTable(revisions, formatDateTime) {
 const shell = shellAPI.createShell({
   appName: "xDoc",
   appSubtitle: "Markdown documentation workspace",
-  defaultView: "pages",
+  defaultView: "library",
   navigation: [
     {
       section: "Docs",
       items: [
-        { id: "pages", label: "Pages", copy: "Structured markdown pages and editing." },
+        { id: "library", label: "Library", copy: "Page tree and document metadata." },
+        { id: "preview", label: "Preview", copy: "Rendered markdown for the active page." },
+        { id: "edit", label: "Edit", copy: "Update markdown and page hierarchy." },
         { id: "history", label: "History", copy: "Revision timeline and change authors." }
       ]
     },
@@ -260,81 +262,18 @@ const shell = shellAPI.createShell({
 
     const docs = await fetchDocs();
     const page = currentPage();
+    const pageSidebar = `
+      <div class="doc-sidebar">
+        <div class="doc-inline-actions">
+          <button id="refresh-docs-workspace" class="shell-button-secondary" type="button">Sync xGroup</button>
+          <button id="new-root-page" class="shell-button" type="button">New root page</button>
+          ${page ? '<button id="new-child-page" class="shell-button-secondary" type="button">New child page</button>' : ""}
+        </div>
+        <div class="doc-tree">${renderPageTree(docs.tree)}</div>
+      </div>
+    `;
 
-    if (state.currentView === "pages") {
-      setMetrics([]);
-      setHeader("Documentation", "Structured markdown pages with revision tracking and authorship context.", docs.syncStatus.lastSyncSucceeded ? "Workspace synced" : "Sync pending");
-      setPanels([
-        {
-          span: "span-12",
-          title: "Pages",
-          copy: "Keep the page tree, editor, preview, and revision context in one compact documentation workspace.",
-          html: `
-            <div class="doc-workspace">
-              <div class="doc-sidebar">
-                <div class="doc-inline-actions">
-                  <button id="refresh-docs-workspace" class="shell-button-secondary" type="button">Sync xGroup</button>
-                  <button id="new-root-page" class="shell-button" type="button">New root page</button>
-                  ${page ? '<button id="new-child-page" class="shell-button-secondary" type="button">New child page</button>' : ""}
-                </div>
-                <div class="doc-tree">${renderPageTree(docs.tree)}</div>
-              </div>
-              <div class="doc-editor-grid">
-                <div class="doc-editor">
-                  ${page ? `
-                    <form id="page-editor" class="doc-field">
-                      <label>Title
-                        <input id="page-title" name="title" type="text" value="${escapeHTML(page.title)}" required>
-                      </label>
-                      <label>Parent
-                        <select id="page-parent" name="parentPageID">
-                          ${pageOptions(docs.pages.filter((item) => item.id !== page.id), page.parentPageID)}
-                        </select>
-                      </label>
-                      <label>Markdown
-                        <textarea id="page-content" name="content">${escapeHTML(page.content)}</textarea>
-                      </label>
-                      <label>Change Summary
-                        <input id="page-summary" name="summary" type="text" placeholder="What changed?">
-                      </label>
-                      <div class="doc-inline-actions">
-                        <button class="shell-button" type="submit">Save page</button>
-                      </div>
-                    </form>
-                  ` : renderEmpty("No page selected", "Create a root page to start the documentation tree.")}
-                </div>
-                <div class="doc-preview">
-                  <div class="doc-metadata">
-                    ${page ? `
-                        <div class="doc-meta-grid">
-                          <div><span>Created</span><strong>${escapeHTML(formatDateTime(page.createdAt))}</strong></div>
-                          <div><span>Updated</span><strong>${escapeHTML(formatDateTime(page.updatedAt))}</strong></div>
-                        <div><span>Author</span><strong>${userRef(page.createdByUserID, userName(page.createdByUserID))}</strong></div>
-                        <div><span>Last editor</span><strong>${userRef(page.updatedByUserID, userName(page.updatedByUserID))}</strong></div>
-                      </div>
-                    ` : renderEmpty("No metadata", "Select a page to see author and edit details.")}
-                  </div>
-                  <div class="doc-preview-body">
-                    ${page ? renderMarkdown(page.content) : renderEmpty("Preview unavailable", "Select a page to render its markdown.")}
-                  </div>
-                  <div class="doc-history">
-                    <div class="doc-metadata">
-                      <div class="panel-heading">
-                        <div>
-                          <h2 class="panel-title">Page History</h2>
-                          <p class="panel-copy">Every save creates a revision with author and timestamp.</p>
-                        </div>
-                      </div>
-                      ${page ? revisionTable(revisionsForPage(page.id), formatDateTime) : renderEmpty("No revisions", "Select a page to see its history.")}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          `
-        }
-      ]);
-
+    function attachPageActions() {
       document.querySelectorAll("[data-page-id]").forEach((button) => {
         button.addEventListener("click", async () => {
           selectedPageID = button.dataset.pageId;
@@ -369,6 +308,138 @@ const shell = shellAPI.createShell({
         selectedPageID = created.id;
         await refresh();
       });
+    }
+
+    if (state.currentView === "library") {
+      setMetrics([]);
+      setHeader("Library", "Structured page tree and metadata without mixing editing and rendered markdown on one screen.", docs.syncStatus.lastSyncSucceeded ? "Workspace synced" : "Sync pending");
+      setPanels([
+        {
+          span: "span-12",
+          title: "Pages",
+          copy: "Browse the documentation structure and inspect authorship before opening preview or edit.",
+          html: `
+            <div class="doc-workspace">
+              ${pageSidebar}
+              <div class="doc-details-grid">
+                <div class="doc-metadata">
+                  ${page ? `
+                    <div class="doc-meta-grid">
+                      <div><span>Title</span><strong>${escapeHTML(page.title)}</strong></div>
+                      <div><span>Slug</span><strong>${escapeHTML(page.slug)}</strong></div>
+                      <div><span>Created</span><strong>${escapeHTML(formatDateTime(page.createdAt))}</strong></div>
+                      <div><span>Updated</span><strong>${escapeHTML(formatDateTime(page.updatedAt))}</strong></div>
+                      <div><span>Author</span><strong>${userRef(page.createdByUserID, userName(page.createdByUserID))}</strong></div>
+                      <div><span>Last editor</span><strong>${userRef(page.updatedByUserID, userName(page.updatedByUserID))}</strong></div>
+                    </div>
+                  ` : renderEmpty("No page selected", "Pick a page from the tree to inspect document details.")}
+                </div>
+                <div class="doc-metadata">
+                  <div class="panel-heading">
+                    <div>
+                      <h2 class="panel-title">Recent Revisions</h2>
+                      <p class="panel-copy">Every save creates a revision with author and timestamp.</p>
+                    </div>
+                  </div>
+                  ${page ? revisionTable(revisionsForPage(page.id), formatDateTime) : renderEmpty("No revisions", "Select a page to see its history.")}
+                </div>
+              </div>
+            </div>
+          `
+        }
+      ]);
+
+      attachPageActions();
+      return;
+    }
+
+    if (state.currentView === "preview") {
+      setMetrics([]);
+      setHeader("Preview", "Rendered markdown is isolated from editing so the page can be reviewed without authoring controls.", page ? page.title : "No page selected");
+      setPanels([
+        {
+          span: "span-12",
+          title: "Rendered Page",
+          copy: "Review the active page as documentation, with metadata kept beside the preview instead of the editor.",
+          html: `
+            <div class="doc-workspace">
+              ${pageSidebar}
+              <div class="doc-details-grid">
+                <div class="doc-preview-body">
+                  ${page ? renderMarkdown(page.content) : renderEmpty("Preview unavailable", "Select a page to render its markdown.")}
+                </div>
+                <div class="doc-metadata">
+                  ${page ? `
+                    <div class="doc-meta-grid">
+                      <div><span>Created</span><strong>${escapeHTML(formatDateTime(page.createdAt))}</strong></div>
+                      <div><span>Updated</span><strong>${escapeHTML(formatDateTime(page.updatedAt))}</strong></div>
+                      <div><span>Author</span><strong>${userRef(page.createdByUserID, userName(page.createdByUserID))}</strong></div>
+                      <div><span>Last editor</span><strong>${userRef(page.updatedByUserID, userName(page.updatedByUserID))}</strong></div>
+                    </div>
+                  ` : renderEmpty("No page selected", "Choose a page from the left rail to preview it.")}
+                </div>
+              </div>
+            </div>
+          `
+        }
+      ]);
+
+      attachPageActions();
+      return;
+    }
+
+    if (state.currentView === "edit") {
+      setMetrics([]);
+      setHeader("Edit", "Authoring is separated from preview so markdown and structure changes can be made in a focused screen.", page ? page.title : "No page selected");
+      setPanels([
+        {
+          span: "span-12",
+          title: "Editor",
+          copy: "Update markdown, title, and hierarchy without competing with the rendered page view.",
+          html: `
+            <div class="doc-workspace">
+              ${pageSidebar}
+              <div class="doc-details-grid">
+                <div class="doc-editor">
+                  ${page ? `
+                    <form id="page-editor" class="doc-field">
+                      <label>Title
+                        <input id="page-title" name="title" type="text" value="${escapeHTML(page.title)}" required>
+                      </label>
+                      <label>Parent
+                        <select id="page-parent" name="parentPageID">
+                          ${pageOptions(docs.pages.filter((item) => item.id !== page.id), page.parentPageID)}
+                        </select>
+                      </label>
+                      <label>Markdown
+                        <textarea id="page-content" name="content">${escapeHTML(page.content)}</textarea>
+                      </label>
+                      <label>Change Summary
+                        <input id="page-summary" name="summary" type="text" placeholder="What changed?">
+                      </label>
+                      <div class="doc-inline-actions">
+                        <button class="shell-button" type="submit">Save page</button>
+                      </div>
+                    </form>
+                  ` : renderEmpty("No page selected", "Select a page to edit it or create a new root page.")}
+                </div>
+                <div class="doc-metadata">
+                  ${page ? `
+                    <div class="doc-meta-grid">
+                      <div><span>Created</span><strong>${escapeHTML(formatDateTime(page.createdAt))}</strong></div>
+                      <div><span>Updated</span><strong>${escapeHTML(formatDateTime(page.updatedAt))}</strong></div>
+                      <div><span>Author</span><strong>${userRef(page.createdByUserID, userName(page.createdByUserID))}</strong></div>
+                      <div><span>Last editor</span><strong>${userRef(page.updatedByUserID, userName(page.updatedByUserID))}</strong></div>
+                    </div>
+                  ` : renderEmpty("No metadata", "Select a page to edit and inspect authorship details.")}
+                </div>
+              </div>
+            </div>
+          `
+        }
+      ]);
+
+      attachPageActions();
 
       document.getElementById("page-editor")?.addEventListener("submit", async (event) => {
         event.preventDefault();

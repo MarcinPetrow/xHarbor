@@ -6,6 +6,7 @@
 
 .doc-sidebar,
 .doc-editor-grid,
+.doc-details-grid,
 .doc-preview,
 .doc-history {
   display: grid;
@@ -63,6 +64,12 @@
 
 .doc-editor-grid {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.doc-details-grid {
+  display: grid;
+  gap: 12px;
+  align-content: start;
 }
 
 .doc-field,
@@ -203,7 +210,8 @@
 
 @media (max-width: 1080px) {
   .doc-workspace,
-  .doc-editor-grid {
+  .doc-editor-grid,
+  .doc-details-grid {
     grid-template-columns: 1fr;
   }
 
