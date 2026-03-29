@@ -160,6 +160,6 @@ Primary local persistence uses SQLite at:
 
 ## Docs
 
-- [docs/product/vision.md](/Users/marcin/Projects/xCompany/xHarbor/docs/product/vision.md)
-- [docs/architecture/monorepo.md](/Users/marcin/Projects/xCompany/xHarbor/docs/architecture/monorepo.md)
-- [docs/architecture/domain-model.md](/Users/marcin/Projects/xCompany/xHarbor/docs/architecture/domain-model.md)
+- [docs/product/vision.md](docs/product/vision.md)
+- [docs/architecture/monorepo.md](docs/architecture/monorepo.md)
+- [docs/architecture/domain-model.md](docs/architecture/domain-model.md)
