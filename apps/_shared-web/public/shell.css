@@ -51,6 +51,7 @@ select {
 
 .shell-root {
   min-height: 100vh;
+  padding-bottom: 58px;
 }
 
 .shell-topbar {
@@ -226,6 +227,51 @@ select {
 
 .shell-body {
   min-height: calc(100vh - 64px);
+}
+
+.shell-footer {
+  position: fixed;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  z-index: 18;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 12px;
+  border-radius: 12px;
+  background: rgba(11, 13, 23, 0.88);
+  border: 1px solid var(--line);
+  box-shadow: 0 10px 24px rgba(2, 5, 18, 0.22);
+  backdrop-filter: blur(14px);
+}
+
+.shell-footer-spacer {
+  min-width: 1px;
+  min-height: 1px;
+}
+
+.shell-footer-brand {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.shell-footer-copy {
+  color: var(--text-3);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.shell-footer-logo {
+  display: block;
+  height: 28px;
+  width: auto;
+  object-fit: contain;
 }
 
 .nav-button {
@@ -680,6 +726,10 @@ select {
 }
 
 @media (max-width: 720px) {
+  .shell-root {
+    padding-bottom: 64px;
+  }
+
   .shell-topbar,
   .main-header,
   .topbar-actions,
@@ -694,6 +744,22 @@ select {
 
   .shell-main {
     padding: 16px 20px 22px;
+  }
+
+  .shell-footer {
+    left: 6px;
+    right: 6px;
+    bottom: 6px;
+    height: 40px;
+    padding: 6px 10px;
+  }
+
+  .shell-footer-copy {
+    font-size: 0.72rem;
+  }
+
+  .shell-footer-logo {
+    height: 24px;
   }
 
   .hero-metrics,

@@ -8,11 +8,13 @@ const port = 3000;
 const apiBaseURL = new URL("http://127.0.0.1:8080");
 const publicRoot = fileURLToPath(new URL("../public/", import.meta.url));
 const sharedPublicRoot = fileURLToPath(new URL("../../_shared-web/public/", import.meta.url));
+const logoPath = fileURLToPath(new URL("../../../go_home.png", import.meta.url));
 
 const contentTypes = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
-  ".js": "application/javascript; charset=utf-8"
+  ".js": "application/javascript; charset=utf-8",
+  ".png": "image/png"
 };
 
 function sendNotFound(response) {
@@ -45,6 +47,10 @@ async function serveFromRoot(rootPath, pathname, response) {
 
 async function serveStatic(pathname, response) {
   const target = pathname === "/" ? "/index.html" : pathname;
+
+  if (target === "/shared/go_home.png") {
+    return serveFromRoot("/", logoPath, response);
+  }
 
   if (target.startsWith("/shared/")) {
     return serveFromRoot(sharedPublicRoot, target.replace("/shared/", "/"), response);

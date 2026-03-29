@@ -200,6 +200,13 @@
             <div id="view-content" class="content-grid"></div>
           </main>
         </div>
+        <footer class="shell-footer">
+          <div class="shell-footer-spacer"></div>
+          <div class="shell-footer-brand">
+            <span class="shell-footer-copy">Powered by</span>
+            <img class="shell-footer-logo" src="/shared/go_home.png" alt="Bold Merge">
+          </div>
+        </footer>
         <div id="user-hover-card" class="user-hover-card"></div>
       </div>
     `;
