@@ -1,0 +1,213 @@
+.doc-workspace {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 12px;
+}
+
+.doc-sidebar,
+.doc-editor-grid,
+.doc-preview,
+.doc-history {
+  display: grid;
+  gap: 10px;
+}
+
+.doc-sidebar {
+  align-content: start;
+}
+
+.doc-tree {
+  display: grid;
+  gap: 6px;
+}
+
+.doc-tree-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: 34px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.025);
+  color: var(--text-1);
+  text-align: left;
+}
+
+.doc-tree-item.active {
+  border-color: var(--accent-ring);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.doc-tree-item strong,
+.doc-tree-item span {
+  min-width: 0;
+}
+
+.doc-tree-item strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.84rem;
+}
+
+.doc-tree-item span {
+  color: var(--text-3);
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.doc-editor-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.doc-field,
+.doc-preview-body,
+.doc-metadata,
+.doc-revision-table {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.doc-field {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+}
+
+.doc-field label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.76rem;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.doc-field input,
+.doc-field select,
+.doc-field textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-1);
+  padding: 9px 10px;
+  font: inherit;
+}
+
+.doc-field textarea {
+  min-height: 360px;
+  resize: vertical;
+  line-height: 1.45;
+}
+
+.doc-preview-body,
+.doc-metadata,
+.doc-revision-table {
+  padding: 12px;
+}
+
+.doc-preview-body {
+  line-height: 1.55;
+}
+
+.doc-preview-body h1,
+.doc-preview-body h2,
+.doc-preview-body h3 {
+  margin: 0 0 10px;
+}
+
+.doc-preview-body p,
+.doc-preview-body ul,
+.doc-preview-body ol,
+.doc-preview-body pre,
+.doc-preview-body blockquote {
+  margin: 0 0 10px;
+}
+
+.doc-preview-body ul,
+.doc-preview-body ol {
+  padding-left: 18px;
+}
+
+.doc-preview-body code {
+  padding: 1px 5px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.07);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85em;
+}
+
+.doc-preview-body pre {
+  overflow: auto;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.doc-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+}
+
+.doc-meta-grid span {
+  color: var(--text-3);
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.doc-meta-grid strong {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.84rem;
+}
+
+.doc-revision-table {
+  display: grid;
+  gap: 8px;
+}
+
+.doc-revision-row {
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr) 180px 210px;
+  gap: 10px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+
+.doc-revision-row:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.doc-revision-row span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.doc-inline-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 1080px) {
+  .doc-workspace,
+  .doc-editor-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .doc-revision-row {
+    grid-template-columns: 1fr;
+  }
+}

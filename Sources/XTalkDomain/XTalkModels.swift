@@ -14,11 +14,33 @@ public struct XTalkUser: Identifiable, Codable, Equatable, Sendable {
     public let id: String
     public var displayName: String
     public var email: String
+    public var firstName: String
+    public var lastName: String
+    public var nickname: String?
+    public var department: String
+    public var title: String
+    public var managerUserID: String?
 
-    public init(id: String, displayName: String, email: String) {
+    public init(
+        id: String,
+        displayName: String,
+        email: String,
+        firstName: String = "",
+        lastName: String = "",
+        nickname: String? = nil,
+        department: String = "",
+        title: String = "",
+        managerUserID: String? = nil
+    ) {
         self.id = id
         self.displayName = displayName
         self.email = email
+        self.firstName = firstName
+        self.lastName = lastName
+        self.nickname = nickname
+        self.department = department
+        self.title = title
+        self.managerUserID = managerUserID
     }
 }
 

@@ -258,6 +258,15 @@ final class XTalkMacOSViewModel {
         color(for: presence(for: userID))
     }
 
+    func user(for userID: String) -> XTalkUser? {
+        chat?.workspace.users.first(where: { $0.id == userID }) ?? users.first(where: { $0.id == userID })
+    }
+
+    func managerName(for user: XTalkUser) -> String? {
+        guard let managerUserID = user.managerUserID else { return nil }
+        return self.user(for: managerUserID)?.displayName
+    }
+
     private func reloadChatIfNeeded() async throws {
         if session.authenticated {
             startPresenceAutomation()
@@ -420,11 +429,13 @@ struct XTalkMacOSAppView: View {
             if model.session.authenticated {
                 HStack(spacing: 10) {
                     if let user = model.session.user {
-                        Text(user.displayName)
-                            .font(.system(size: 13, weight: .semibold))
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))
+                        UserHoverAnchor(user: user, managerName: model.managerName(for: user)) {
+                            Text(user.displayName)
+                                .font(.system(size: 13, weight: .semibold))
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))
+                        }
                     }
 
                     Button("Refresh") {
@@ -564,12 +575,15 @@ struct XTalkMacOSAppView: View {
                 }
             ) {
                 ForEach(model.directThreads) { conversation in
+                    let partnerID = chat.directConversationPartnerID(for: conversation.id, currentUserID: model.currentUserID ?? "")
                     threadButton(
                         title: model.directTitle(for: conversation),
                         subtitle: "",
                         unread: model.unreadCount(for: conversation),
                         isActive: model.selectedThreadKind == .direct && model.selectedThreadID == conversation.id,
-                        titleColor: model.directTitleColor(for: conversation)
+                        titleColor: model.directTitleColor(for: conversation),
+                        user: partnerID.flatMap { model.user(for: $0) },
+                        managerName: partnerID.flatMap { model.user(for: $0) }.flatMap { model.managerName(for: $0) }
                     ) {
                         model.selectDirect(conversation.id)
                     }
@@ -589,11 +603,24 @@ struct XTalkMacOSAppView: View {
     private func activeConversation(chat: XTalkChatPayload) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(model.activeTitle)
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
-                    .foregroundStyle(model.activeTitleColor)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
+                if model.selectedThreadKind == .direct,
+                   let currentUserID = model.currentUserID,
+                   let partnerID = chat.directConversationPartnerID(for: model.selectedThreadID, currentUserID: currentUserID),
+                   let partner = model.user(for: partnerID) {
+                    UserHoverAnchor(user: partner, managerName: model.managerName(for: partner)) {
+                        Text(model.activeTitle)
+                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                            .foregroundStyle(model.activeTitleColor)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    }
+                } else {
+                    Text(model.activeTitle)
+                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .foregroundStyle(model.activeTitleColor)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
                 Text(model.activeSubtitle)
                     .font(.system(size: 13))
                     .foregroundStyle(Color.white.opacity(0.68))
@@ -619,6 +646,8 @@ struct XTalkMacOSAppView: View {
                             MessageRow(
                                 author: chat.workspace.users.first(where: { $0.id == message.authorUserID })?.displayName ?? message.authorUserID,
                                 authorColor: model.authorColor(for: message.authorUserID),
+                                user: model.user(for: message.authorUserID),
+                                managerName: model.user(for: message.authorUserID).flatMap { model.managerName(for: $0) },
                                 messageBody: message.body,
                                 timestamp: message.createdAt
                             )
@@ -689,16 +718,28 @@ struct XTalkMacOSAppView: View {
         unread: Int,
         isActive: Bool,
         titleColor: Color,
+        user: XTalkUser? = nil,
+        managerName: String? = nil,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
             HStack(alignment: .top, spacing: 8) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(title)
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(titleColor)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
+                    if let user {
+                        UserHoverAnchor(user: user, managerName: managerName) {
+                            Text(title)
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundStyle(titleColor)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                        }
+                    } else {
+                        Text(title)
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(titleColor)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    }
                     if !subtitle.isEmpty {
                         Text(subtitle)
                             .font(.system(size: 12))
@@ -774,14 +815,24 @@ private struct ChatFieldStyle: TextFieldStyle {
 private struct MessageRow: View {
     let author: String
     let authorColor: Color
+    let user: XTalkUser?
+    let managerName: String?
     let messageBody: String
     let timestamp: String
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(author)
-                .font(.system(size: 13, weight: .bold))
-                .foregroundStyle(authorColor)
+            if let user {
+                UserHoverAnchor(user: user, managerName: managerName) {
+                    Text(author)
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(authorColor)
+                }
+            } else {
+                Text(author)
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(authorColor)
+            }
             Text(messageBody)
                 .font(.system(size: 13))
                 .foregroundStyle(Color.white.opacity(0.88))
@@ -797,6 +848,90 @@ private struct MessageRow: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(Color.white.opacity(0.08), lineWidth: 1)
         )
+    }
+}
+
+private struct UserHoverAnchor<Label: View>: View {
+    let user: XTalkUser
+    let managerName: String?
+    @ViewBuilder var label: () -> Label
+
+    @State private var isHovering = false
+    @State private var showCard = false
+    @State private var hoverTask: Task<Void, Never>?
+
+    var body: some View {
+        label()
+            .onHover { hovering in
+                isHovering = hovering
+                hoverTask?.cancel()
+
+                if hovering {
+                    hoverTask = Task {
+                        try? await Task.sleep(nanoseconds: 450_000_000)
+                        guard !Task.isCancelled, isHovering else { return }
+                        showCard = true
+                    }
+                } else {
+                    showCard = false
+                }
+            }
+            .popover(isPresented: $showCard, arrowEdge: .bottom) {
+                UserHoverCardView(user: user, managerName: managerName)
+            }
+    }
+}
+
+private struct UserHoverCardView: View {
+    let user: XTalkUser
+    let managerName: String?
+
+    private var fullName: String {
+        let parts = [user.firstName, user.lastName].filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        return parts.isEmpty ? user.displayName : parts.joined(separator: " ")
+    }
+
+    private var rows: [(String, String)] {
+        [
+            ("Nickname", user.nickname?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""),
+            ("Department", user.department),
+            ("Title", user.title),
+            ("Manager", managerName ?? ""),
+            ("Email", user.email)
+        ].filter { !$0.1.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(fullName)
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+                if user.displayName != fullName {
+                    Text(user.displayName)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Color.white.opacity(0.66))
+                }
+            }
+
+            ForEach(rows, id: \.0) { row in
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(row.0)
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(Color.white.opacity(0.42))
+                        .textCase(.uppercase)
+                        .tracking(1.1)
+                    Text(row.1)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Color.white.opacity(0.88))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+            }
+        }
+        .padding(14)
+        .frame(width: 240, alignment: .leading)
+        .background(Color(red: 0.10, green: 0.11, blue: 0.17))
     }
 }
 

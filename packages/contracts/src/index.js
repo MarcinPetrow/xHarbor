@@ -261,3 +261,176 @@ export function createDemoTalkState() {
     }
   };
 }
+
+export function createDemoDocsState() {
+  const workspace = createDemoWorkspace().snapshot;
+
+  return {
+    snapshot: {
+      workspace
+    },
+    pages: [
+      {
+        id: "page-engineering-handbook",
+        slug: "engineering-handbook",
+        title: "Engineering Handbook",
+        parentPageID: null,
+        content: [
+          "# Engineering Handbook",
+          "",
+          "Welcome to the shared documentation space for xHarbor delivery teams.",
+          "",
+          "## Focus areas",
+          "",
+          "- architecture decisions",
+          "- operational runbooks",
+          "- onboarding notes"
+        ].join("\n"),
+        createdAt: "2026-03-29T09:00:00.000Z",
+        updatedAt: "2026-03-29T09:30:00.000Z",
+        createdByUserID: "user-marcin",
+        updatedByUserID: "user-marcin"
+      },
+      {
+        id: "page-release-runbook",
+        slug: "release-runbook",
+        title: "Release Runbook",
+        parentPageID: "page-engineering-handbook",
+        content: [
+          "## Release Runbook",
+          "",
+          "Use this page to capture release readiness checks.",
+          "",
+          "1. validate backlog status",
+          "2. confirm ownership",
+          "3. capture rollout notes"
+        ].join("\n"),
+        createdAt: "2026-03-29T09:20:00.000Z",
+        updatedAt: "2026-03-29T10:10:00.000Z",
+        createdByUserID: "user-anna",
+        updatedByUserID: "user-anna"
+      },
+      {
+        id: "page-onboarding",
+        slug: "onboarding",
+        title: "Onboarding",
+        parentPageID: "page-engineering-handbook",
+        content: [
+          "## Onboarding",
+          "",
+          "New team members should review:",
+          "",
+          "- xGroup directory data",
+          "- xTalk collaboration norms",
+          "- xBacklog delivery flow"
+        ].join("\n"),
+        createdAt: "2026-03-29T09:45:00.000Z",
+        updatedAt: "2026-03-29T09:45:00.000Z",
+        createdByUserID: "user-marcin",
+        updatedByUserID: "user-marcin"
+      }
+    ],
+    revisions: [
+      {
+        id: "rev-page-engineering-handbook-1",
+        pageID: "page-engineering-handbook",
+        version: 1,
+        title: "Engineering Handbook",
+        slug: "engineering-handbook",
+        parentPageID: null,
+        content: [
+          "# Engineering Handbook",
+          "",
+          "Welcome to the shared documentation space for xHarbor delivery teams."
+        ].join("\n"),
+        authorUserID: "user-marcin",
+        createdAt: "2026-03-29T09:00:00.000Z",
+        summary: "Page created."
+      },
+      {
+        id: "rev-page-engineering-handbook-2",
+        pageID: "page-engineering-handbook",
+        version: 2,
+        title: "Engineering Handbook",
+        slug: "engineering-handbook",
+        parentPageID: null,
+        content: [
+          "# Engineering Handbook",
+          "",
+          "Welcome to the shared documentation space for xHarbor delivery teams.",
+          "",
+          "## Focus areas",
+          "",
+          "- architecture decisions",
+          "- operational runbooks",
+          "- onboarding notes"
+        ].join("\n"),
+        authorUserID: "user-marcin",
+        createdAt: "2026-03-29T09:30:00.000Z",
+        summary: "Added handbook scope."
+      },
+      {
+        id: "rev-page-release-runbook-1",
+        pageID: "page-release-runbook",
+        version: 1,
+        title: "Release Runbook",
+        slug: "release-runbook",
+        parentPageID: "page-engineering-handbook",
+        content: [
+          "## Release Runbook",
+          "",
+          "Use this page to capture release readiness checks."
+        ].join("\n"),
+        authorUserID: "user-anna",
+        createdAt: "2026-03-29T09:20:00.000Z",
+        summary: "Page created."
+      },
+      {
+        id: "rev-page-release-runbook-2",
+        pageID: "page-release-runbook",
+        version: 2,
+        title: "Release Runbook",
+        slug: "release-runbook",
+        parentPageID: "page-engineering-handbook",
+        content: [
+          "## Release Runbook",
+          "",
+          "Use this page to capture release readiness checks.",
+          "",
+          "1. validate backlog status",
+          "2. confirm ownership",
+          "3. capture rollout notes"
+        ].join("\n"),
+        authorUserID: "user-anna",
+        createdAt: "2026-03-29T10:10:00.000Z",
+        summary: "Added checklist steps."
+      },
+      {
+        id: "rev-page-onboarding-1",
+        pageID: "page-onboarding",
+        version: 1,
+        title: "Onboarding",
+        slug: "onboarding",
+        parentPageID: "page-engineering-handbook",
+        content: [
+          "## Onboarding",
+          "",
+          "New team members should review:",
+          "",
+          "- xGroup directory data",
+          "- xTalk collaboration norms",
+          "- xBacklog delivery flow"
+        ].join("\n"),
+        authorUserID: "user-marcin",
+        createdAt: "2026-03-29T09:45:00.000Z",
+        summary: "Page created."
+      }
+    ],
+    syncStatus: {
+      source: "bootstrap",
+      lastSyncAt: null,
+      lastSyncSucceeded: false,
+      lastError: "xGroup sync not attempted yet"
+    }
+  };
+}

@@ -10,6 +10,8 @@ This directory is reserved for application entry points.
 - `xdashboard-web`
 - `xtalk-api`
 - `xtalk-web`
+- `xdoc-api`
+- `xdoc-web`
 - `xtalk-macos`
 
 Current active implementation path is Node monorepo workspaces for web modules.

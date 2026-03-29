@@ -10,6 +10,8 @@ export const permissions = {
   manageDirectory: "manageDirectory",
   manageBacklog: "manageBacklog",
   viewDashboard: "viewDashboard",
+  viewDocs: "viewDocs",
+  editDocs: "editDocs",
   createProject: (teamID) => ({ type: "createProject", teamID }),
   createTask: (teamID) => ({ type: "createTask", teamID })
 };
@@ -40,6 +42,10 @@ export function authorize(snapshot, actingUserID, permission) {
   }
 
   if (permission === permissions.viewDashboard) {
+    return user;
+  }
+
+  if (permission === permissions.viewDocs || permission === permissions.editDocs) {
     return user;
   }
 
