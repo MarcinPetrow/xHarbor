@@ -168,28 +168,48 @@ function presenceClass(presence) {
   return "presence-offline";
 }
 
+function presenceDot(presence) {
+  return `<span class="presence-dot ${presenceClass(presence)}" aria-hidden="true"></span>`;
+}
+
 function preferredRoomTeamID(workspace, currentUserID) {
   return workspace.memberships.find((membership) => membership.userID === currentUserID)?.teamID || "";
 }
 
-function threadItem(title, copy, unread, active, kind, id, titleClass = "", userID = "") {
+function initials(value) {
+  return String(value || "")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase() || "?";
+}
+
+function threadItem(title, copy, unread, active, kind, id, presence = "", userID = "") {
   return `
     <article class="chat-thread${active ? " active" : ""}" data-thread-kind="${kind}" data-thread-id="${id}">
-      <div class="chat-thread-header">
-        <span class="chat-thread-title ${titleClass}"${userID ? ` data-user-id="${shellAPI.escapeHTML(userID)}"` : ""}>${shellAPI.escapeHTML(title)}</span>
+      <div class="chat-thread-body">
+        <span class="chat-thread-avatar">${shellAPI.escapeHTML(initials(title))}</span>
+        <div class="chat-thread-meta">
+          <span class="chat-thread-title"${userID ? ` data-user-id="${shellAPI.escapeHTML(userID)}"` : ""}>${shellAPI.escapeHTML(title)}${presence ? presenceDot(presence) : ""}</span>
+          ${copy ? `<span class="chat-thread-copy">${shellAPI.escapeHTML(copy)}</span>` : ""}
+        </div>
         ${unread ? `<span class="chat-unread">${shellAPI.escapeHTML(String(unread))}</span>` : ""}
       </div>
-      ${copy ? `<div class="chat-thread-copy">${shellAPI.escapeHTML(copy)}</div>` : ""}
     </article>
   `;
 }
 
-function messageItem(author, body, createdAt, formatDateTime, authorClass = "", authorUserID = "") {
+function messageItem(author, body, createdAt, formatDateTime, authorPresence = "", authorUserID = "", own = false) {
   return `
-    <article class="chat-message">
-      <h4 class="${authorClass}"${authorUserID ? ` data-user-id="${shellAPI.escapeHTML(authorUserID)}"` : ""}>${shellAPI.escapeHTML(author)}</h4>
-      <p>${shellAPI.escapeHTML(body)}</p>
-      <time>${shellAPI.escapeHTML(formatDateTime(createdAt))}</time>
+    <article class="chat-message${own ? " own" : ""}">
+      <div class="chat-message-glow"></div>
+      <div class="chat-message-shell">
+        <h4${authorUserID ? ` data-user-id="${shellAPI.escapeHTML(authorUserID)}"` : ""}>${shellAPI.escapeHTML(author)}${authorPresence ? presenceDot(authorPresence) : ""}</h4>
+        <p>${shellAPI.escapeHTML(body)}</p>
+        <time>${shellAPI.escapeHTML(formatDateTime(createdAt))}</time>
+      </div>
     </article>
   `;
 }
@@ -197,6 +217,7 @@ function messageItem(author, body, createdAt, formatDateTime, authorClass = "", 
 shell = shellAPI.createShell({
   appName: "xTalk",
   appSubtitle: "Rooms and direct collaboration",
+  shellClassName: "shell-compact",
   defaultView: "chat",
   navigation: [
     {
@@ -229,7 +250,7 @@ shell = shellAPI.createShell({
     if (!state.session.authenticated) {
       stopChatStream();
       stopPresenceAutomation();
-      setHeader("Chat Access", "Sign in from the navbar to use xTalk.", "Signed out");
+      setHeader("", "", "", { hidden: true });
       setMetrics([]);
       setPanels([
         {
@@ -256,27 +277,25 @@ shell = shellAPI.createShell({
     const directThreads = payload.directConversations.map((conversation) => {
       const partnerID = conversation.participantUserIDs.find((id) => id !== state.session.user.id);
       const partner = payload.workspace.users.find((user) => user.id === partnerID);
+      const partnerPresence = presenceByUserID.get(partnerID) || "offline";
       return {
         id: conversation.id,
         title: partner?.displayName || conversation.id,
-        copy: "",
-        titleClass: presenceClass(presenceByUserID.get(partnerID)),
+        copy: partnerPresence === "online" ? "Online now" : partnerPresence === "brb" ? "BRB" : "Offline",
+        presence: partnerPresence,
         userID: partnerID,
         unread: payload.directUnread?.[conversation.id] || 0,
         conversation
       };
     });
 
-    const roomThreads = payload.rooms.map((room) => {
-      const team = payload.workspace.teams.find((item) => item.id === room.teamID);
-      return {
-        id: room.id,
-        title: room.name,
-        copy: "",
-        unread: payload.roomUnread?.[room.id] || 0,
-        room
-      };
-    });
+    const roomThreads = payload.rooms.map((room) => ({
+      id: room.id,
+      title: room.name,
+      copy: "",
+      unread: payload.roomUnread?.[room.id] || 0,
+      room
+    }));
 
     const availableThreads = [
       ...roomThreads.map((thread) => ({ kind: "room", ...thread })),
@@ -299,23 +318,24 @@ shell = shellAPI.createShell({
       ? payload.workspace.teams.find((team) => team.id === activeRoom?.teamID)?.name || ""
       : "Private conversation";
     const activeDirectPartnerID = activeDirect?.participantUserIDs.find((id) => id !== state.session.user.id);
-    const activeTitleClass = selectedThread.kind === "direct"
-      ? presenceClass(presenceByUserID.get(activeDirectPartnerID))
+    const activeDirectPresence = selectedThread.kind === "direct"
+      ? presenceByUserID.get(activeDirectPartnerID)
       : "";
+    const activeMembers = selectedThread.kind === "room"
+      ? payload.workspace.memberships
+          .filter((membership) => membership.teamID === activeRoom?.teamID)
+          .map((membership) => payload.workspace.users.find((user) => user.id === membership.userID))
+          .filter(Boolean)
+      : payload.workspace.users.filter((user) => activeDirect?.participantUserIDs.includes(user.id));
 
     setMetrics([]);
-    setHeader("Chat", "Compact messenger layout: left conversation rail, right active chat.", payload.syncStatus.lastSyncSucceeded ? "Synced" : "Sync pending");
+    setHeader("", "", "", { hidden: true });
     setPanels([
       {
         span: "span-12",
-        title: "Messenger",
-        copy: "Settings remain in the user menu under the navbar. The main view stays focused on chat only.",
+        className: "panel-bare",
         html: `
-          <div class="section-toolbar">
-            <span class="muted">${escapeHTML(payload.syncStatus.lastSyncAt ? `Last sync ${formatDateTime(payload.syncStatus.lastSyncAt)}` : "No sync yet")}</span>
-            <button id="refresh-button" class="shell-button-secondary" type="button">Refresh workspace</button>
-          </div>
-          <div class="chat-layout">
+          <div class="chat-layout chat-neon-surface">
             <aside class="chat-sidebar">
               <div class="chat-mini-section">
                 <div class="chat-section-heading">
@@ -347,7 +367,7 @@ shell = shellAPI.createShell({
                 </form>
                 <div id="direct-thread-list" class="chat-thread-list">
                   ${directThreads.length
-                    ? directThreads.map((thread) => threadItem(thread.title, thread.copy, thread.unread, selectedThread.kind === "direct" && selectedThread.id === thread.id, "direct", thread.id, thread.titleClass, thread.userID)).join("")
+                    ? directThreads.map((thread) => threadItem(thread.title, thread.copy, thread.unread, selectedThread.kind === "direct" && selectedThread.id === thread.id, "direct", thread.id, thread.presence, thread.userID)).join("")
                     : renderEmpty("No direct conversations", "Start the first DM below.")}
                 </div>
               </div>
@@ -355,8 +375,11 @@ shell = shellAPI.createShell({
             <section class="chat-main">
               ${selectedThread.id ? `
                 <div class="chat-header">
-                  <h3 class="${activeTitleClass}"${activeDirectPartnerID ? ` data-user-id="${escapeHTML(activeDirectPartnerID)}"` : ""}>${escapeHTML(activeTitle || "Conversation")}</h3>
-                  <p>${escapeHTML(activeSubtitle || "Chat thread")}</p>
+                  <div>
+                    <h3${activeDirectPartnerID ? ` data-user-id="${escapeHTML(activeDirectPartnerID)}"` : ""}>${escapeHTML(activeTitle || "Conversation")}${activeDirectPresence ? presenceDot(activeDirectPresence) : ""}</h3>
+                    <p>${escapeHTML(activeSubtitle || "Chat thread")}</p>
+                  </div>
+                  <button id="mark-read-button" class="chat-header-action" type="button">Mark as read</button>
                 </div>
                 <div class="chat-timeline">
                   ${activeMessages.length
@@ -367,30 +390,53 @@ shell = shellAPI.createShell({
                           message.body,
                           message.createdAt,
                           formatDateTime,
-                          presenceClass(presenceByUserID.get(message.authorUserID)),
-                          message.authorUserID
+                          presenceByUserID.get(message.authorUserID),
+                          message.authorUserID,
+                          message.authorUserID === state.session.user.id
                         );
                       }).join("")
                     : renderEmpty("No messages", "Start the conversation.")}
                 </div>
                 <form id="message-form" class="chat-composer">
-                  <textarea id="message-body" class="shell-textarea" placeholder="Write a message" required></textarea>
+                  <textarea id="message-body" class="shell-textarea chat-composer-input" placeholder="Write a message" required></textarea>
                   <div class="inline-actions">
-                    <button class="shell-button" type="submit">Send</button>
-                    <button id="mark-read-button" class="shell-button-secondary" type="button">Mark as read</button>
+                    <button class="shell-button chat-send-button" type="submit">Send</button>
                   </div>
                 </form>
               ` : renderEmpty("No conversation selected", "Choose a room or direct conversation from the left rail.")}
             </section>
+            <aside class="chat-insights">
+              <article class="chat-insight-card chat-insight-hero">
+                <span class="chat-insight-label">Active thread</span>
+                <strong>${escapeHTML(activeTitle || "No selection")}</strong>
+                <p>${escapeHTML(selectedThread.kind === "room" ? "Room conversation" : selectedThread.kind === "direct" ? "Direct conversation" : "Select a conversation")}</p>
+              </article>
+              <article class="chat-insight-card chat-insight-members">
+                <span class="chat-insight-label">Participants</span>
+                <div class="chat-member-list">
+                  ${activeMembers.length
+                    ? activeMembers.map((user) => `
+                      <div class="chat-member-row">
+                        <span class="chat-member-avatar">${escapeHTML(initials(user.displayName))}</span>
+                        <span data-user-id="${escapeHTML(user.id)}">${escapeHTML(user.displayName)}${presenceDot(presenceByUserID.get(user.id))}</span>
+                      </div>
+                    `).join("")
+                    : `<span class="muted">No participants to show.</span>`}
+                </div>
+              </article>
+              <article class="chat-insight-card chat-insight-archived">
+                <span class="chat-insight-label">Archived rooms</span>
+                <div class="chat-archived-list">
+                  ${payload.archivedRooms?.length
+                    ? payload.archivedRooms.slice(0, 4).map((room) => `<div class="chat-archived-item">${escapeHTML(room.name)}</div>`).join("")
+                    : `<span class="muted">No archived rooms.</span>`}
+                </div>
+              </article>
+            </aside>
           </div>
         `
       }
     ]);
-
-    document.getElementById("refresh-button")?.addEventListener("click", async () => {
-      await refreshWorkspace();
-      await refresh();
-    });
 
     document.querySelectorAll("[data-thread-id]").forEach((node) => {
       node.addEventListener("click", async () => {

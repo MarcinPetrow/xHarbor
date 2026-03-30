@@ -227,12 +227,12 @@ final class XTalkMacOSViewModel {
         }
     }
 
-    var activeTitleColor: Color {
+    var activeDirectPresence: XTalkPresence? {
         guard let chat, let currentUserID, selectedThreadKind == .direct else {
-            return Color.white
+            return nil
         }
         let partnerID = chat.directConversationPartnerID(for: selectedThreadID, currentUserID: currentUserID) ?? ""
-        return color(for: presence(for: partnerID))
+        return presence(for: partnerID)
     }
 
     func unreadCount(for room: XTalkRoom) -> Int {
@@ -248,14 +248,14 @@ final class XTalkMacOSViewModel {
         return chat.directConversationTitle(for: conversation.id, currentUserID: currentUserID)
     }
 
-    func directTitleColor(for conversation: XTalkDirectConversation) -> Color {
-        guard let currentUserID, let chat else { return color(for: .offline) }
+    func directPresence(for conversation: XTalkDirectConversation) -> XTalkPresence {
+        guard let currentUserID, let chat else { return .offline }
         let partnerID = chat.directConversationPartnerID(for: conversation.id, currentUserID: currentUserID) ?? ""
-        return color(for: presence(for: partnerID))
+        return presence(for: partnerID)
     }
 
-    func authorColor(for userID: String) -> Color {
-        color(for: presence(for: userID))
+    func authorPresence(for userID: String) -> XTalkPresence {
+        presence(for: userID)
     }
 
     func user(for userID: String) -> XTalkUser? {
@@ -402,16 +402,8 @@ struct XTalkMacOSAppView: View {
 
     private var topBar: some View {
         HStack(spacing: 12) {
-            RoundedRectangle(cornerRadius: 10)
-                .fill(
-                    RadialGradient(
-                        colors: [Color.white.opacity(0.9), Color(red: 1.0, green: 0.6, blue: 0.29)],
-                        center: .center,
-                        startRadius: 2,
-                        endRadius: 22
-                    )
-                )
-                .frame(width: 32, height: 32)
+            PlatformMarkIcon()
+                .frame(width: 34, height: 34)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("xHarbor:xTalk")
@@ -513,83 +505,8 @@ struct XTalkMacOSAppView: View {
 
     private func chatSidebar(chat: XTalkChatPayload) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            sidebarSection(
-                title: "Rooms",
-                accessory: {
-                    Menu {
-                        TextField("New room", text: $model.roomName)
-                        Divider()
-                        Button("Create Room") {
-                            Task { await model.createRoom() }
-                        }
-                        .disabled(model.roomName.isEmpty || model.preferredTeamID == nil)
-                    } label: {
-                        Image(systemName: "plus")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundStyle(.white)
-                            .frame(width: 22, height: 22)
-                            .background(Color.white.opacity(0.05), in: Circle())
-                            .overlay(Circle().stroke(Color.white.opacity(0.08), lineWidth: 1))
-                    }
-                    .menuStyle(.borderlessButton)
-                    .buttonStyle(.plain)
-                }
-            ) {
-                ForEach(model.roomThreads) { room in
-                    threadButton(
-                        title: room.name,
-                        subtitle: "",
-                        unread: model.unreadCount(for: room),
-                        isActive: model.selectedThreadKind == .room && model.selectedThreadID == room.id,
-                        titleColor: .white
-                    ) {
-                        model.selectRoom(room.id)
-                    }
-                }
-            }
-
-            sidebarSection(
-                title: "Direct Messages",
-                accessory: {
-                    Menu {
-                        Picker("User", selection: $model.selectedDMUserID) {
-                            ForEach(chat.workspace.users.filter { $0.id != model.currentUserID }) { user in
-                                Text(user.displayName).tag(user.id)
-                            }
-                        }
-                        Divider()
-                        Button("Open DM") {
-                            Task { await model.createDM() }
-                        }
-                        .disabled(model.selectedDMUserID.isEmpty)
-                    } label: {
-                        Image(systemName: "plus")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundStyle(.white)
-                            .frame(width: 22, height: 22)
-                            .background(Color.white.opacity(0.05), in: Circle())
-                            .overlay(Circle().stroke(Color.white.opacity(0.08), lineWidth: 1))
-                    }
-                    .menuStyle(.borderlessButton)
-                    .buttonStyle(.plain)
-                }
-            ) {
-                ForEach(model.directThreads) { conversation in
-                    let partnerID = chat.directConversationPartnerID(for: conversation.id, currentUserID: model.currentUserID ?? "")
-                    threadButton(
-                        title: model.directTitle(for: conversation),
-                        subtitle: "",
-                        unread: model.unreadCount(for: conversation),
-                        isActive: model.selectedThreadKind == .direct && model.selectedThreadID == conversation.id,
-                        titleColor: model.directTitleColor(for: conversation),
-                        user: partnerID.flatMap { model.user(for: $0) },
-                        managerName: partnerID.flatMap { model.user(for: $0) }.flatMap { model.managerName(for: $0) }
-                    ) {
-                        model.selectDirect(conversation.id)
-                    }
-                }
-            }
-
+            roomSidebarSection
+            directSidebarSection(chat: chat)
         }
         .padding(14)
         .frame(maxHeight: .infinity, alignment: .top)
@@ -608,18 +525,10 @@ struct XTalkMacOSAppView: View {
                    let partnerID = chat.directConversationPartnerID(for: model.selectedThreadID, currentUserID: currentUserID),
                    let partner = model.user(for: partnerID) {
                     UserHoverAnchor(user: partner, managerName: model.managerName(for: partner)) {
-                        Text(model.activeTitle)
-                            .font(.system(size: 20, weight: .bold, design: .rounded))
-                            .foregroundStyle(model.activeTitleColor)
-                            .lineLimit(1)
-                            .truncationMode(.tail)
+                        titleWithPresence(model.activeTitle, presence: model.activeDirectPresence)
                     }
                 } else {
-                    Text(model.activeTitle)
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
-                        .foregroundStyle(model.activeTitleColor)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
+                    titleWithPresence(model.activeTitle, presence: model.activeDirectPresence)
                 }
                 Text(model.activeSubtitle)
                     .font(.system(size: 13))
@@ -645,7 +554,7 @@ struct XTalkMacOSAppView: View {
                         ForEach(model.activeMessages) { message in
                             MessageRow(
                                 author: chat.workspace.users.first(where: { $0.id == message.authorUserID })?.displayName ?? message.authorUserID,
-                                authorColor: model.authorColor(for: message.authorUserID),
+                                authorPresence: model.authorPresence(for: message.authorUserID),
                                 user: model.user(for: message.authorUserID),
                                 managerName: model.user(for: message.authorUserID).flatMap { model.managerName(for: $0) },
                                 messageBody: message.body,
@@ -685,6 +594,84 @@ struct XTalkMacOSAppView: View {
         )
     }
 
+    private var roomSidebarSection: some View {
+        sidebarSection(
+            title: "Rooms",
+            accessory: { addThreadMenu(kind: .room) }
+        ) {
+            ForEach(model.roomThreads) { room in
+                threadButton(
+                    title: room.name,
+                    subtitle: "",
+                    unread: model.unreadCount(for: room),
+                    isActive: model.selectedThreadKind == .room && model.selectedThreadID == room.id
+                ) {
+                    model.selectRoom(room.id)
+                }
+            }
+        }
+    }
+
+    private func directSidebarSection(chat: XTalkChatPayload) -> some View {
+        sidebarSection(
+            title: "Direct Messages",
+            accessory: { addThreadMenu(kind: .direct, chat: chat) }
+        ) {
+            ForEach(model.directThreads) { conversation in
+                let partnerID = chat.directConversationPartnerID(for: conversation.id, currentUserID: model.currentUserID ?? "")
+                threadButton(
+                    title: model.directTitle(for: conversation),
+                    subtitle: "",
+                    unread: model.unreadCount(for: conversation),
+                    isActive: model.selectedThreadKind == .direct && model.selectedThreadID == conversation.id,
+                    presence: model.directPresence(for: conversation),
+                    user: partnerID.flatMap { model.user(for: $0) },
+                    managerName: partnerID.flatMap { model.user(for: $0) }.flatMap { model.managerName(for: $0) }
+                ) {
+                    model.selectDirect(conversation.id)
+                }
+            }
+        }
+    }
+
+    private enum SidebarAddKind {
+        case room
+        case direct
+    }
+
+    private func addThreadMenu(kind: SidebarAddKind, chat: XTalkChatPayload? = nil) -> some View {
+        Menu {
+            if kind == .room {
+                TextField("New room", text: $model.roomName)
+                Divider()
+                Button("Create Room") {
+                    Task { await model.createRoom() }
+                }
+                .disabled(model.roomName.isEmpty || model.preferredTeamID == nil)
+            } else if let chat {
+                Picker("User", selection: $model.selectedDMUserID) {
+                    ForEach(chat.workspace.users.filter { $0.id != model.currentUserID }) { user in
+                        Text(user.displayName).tag(user.id)
+                    }
+                }
+                Divider()
+                Button("Open DM") {
+                    Task { await model.createDM() }
+                }
+                .disabled(model.selectedDMUserID.isEmpty)
+            }
+        } label: {
+            Image(systemName: "plus")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(width: 22, height: 22)
+                .background(Color.white.opacity(0.05), in: Circle())
+                .overlay(Circle().stroke(Color.white.opacity(0.08), lineWidth: 1))
+        }
+        .menuStyle(.borderlessButton)
+        .buttonStyle(.plain)
+    }
+
     private func sidebarSection<Accessory: View, Content: View>(
         title: String,
         @ViewBuilder accessory: () -> Accessory,
@@ -712,12 +699,45 @@ struct XTalkMacOSAppView: View {
         sidebarSection(title: title, accessory: { EmptyView() }, content: content)
     }
 
+    private func presenceDot(_ presence: XTalkPresence?) -> some View {
+        Circle()
+            .fill(model.color(for: presence ?? .offline))
+            .frame(width: 7, height: 7)
+            .overlay(Circle().stroke(Color.white.opacity(0.14), lineWidth: 1))
+    }
+
+    private func labelWithPresence(_ title: String, presence: XTalkPresence?) -> some View {
+        HStack(spacing: 6) {
+            Text(title)
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .truncationMode(.tail)
+            if presence != nil {
+                presenceDot(presence)
+            }
+        }
+    }
+
+    private func titleWithPresence(_ title: String, presence: XTalkPresence?) -> some View {
+        HStack(spacing: 7) {
+            Text(title)
+                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .truncationMode(.tail)
+            if presence != nil {
+                presenceDot(presence)
+            }
+        }
+    }
+
     private func threadButton(
         title: String,
         subtitle: String,
         unread: Int,
         isActive: Bool,
-        titleColor: Color,
+        presence: XTalkPresence? = nil,
         user: XTalkUser? = nil,
         managerName: String? = nil,
         action: @escaping () -> Void
@@ -727,18 +747,10 @@ struct XTalkMacOSAppView: View {
                 VStack(alignment: .leading, spacing: 3) {
                     if let user {
                         UserHoverAnchor(user: user, managerName: managerName) {
-                            Text(title)
-                                .font(.system(size: 13, weight: .bold))
-                                .foregroundStyle(titleColor)
-                                .lineLimit(1)
-                                .truncationMode(.tail)
+                            labelWithPresence(title, presence: presence)
                         }
                     } else {
-                        Text(title)
-                            .font(.system(size: 13, weight: .bold))
-                            .foregroundStyle(titleColor)
-                            .lineLimit(1)
-                            .truncationMode(.tail)
+                        labelWithPresence(title, presence: presence)
                     }
                     if !subtitle.isEmpty {
                         Text(subtitle)
@@ -774,6 +786,60 @@ struct XTalkMacOSAppView: View {
             )
         }
         .buttonStyle(.plain)
+    }
+}
+
+private struct PlatformMarkIcon: View {
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 11, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.18, green: 0.26, blue: 0.78),
+                            Color(red: 0.17, green: 0.80, blue: 0.94),
+                            Color(red: 0.56, green: 0.92, blue: 1.0)
+                        ],
+                        startPoint: .bottomLeading,
+                        endPoint: .topTrailing
+                    )
+                )
+                .rotationEffect(.degrees(45))
+                .mask(
+                    Rectangle()
+                        .overlay(alignment: .leading) {
+                            Rectangle()
+                                .frame(width: 17)
+                                .offset(x: -10)
+                                .blendMode(.destinationOut)
+                        }
+                )
+
+            RoundedRectangle(cornerRadius: 11, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color.white,
+                            Color(red: 0.95, green: 0.97, blue: 1.0),
+                            Color(red: 0.79, green: 0.85, blue: 0.92)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .rotationEffect(.degrees(-45))
+                .mask(
+                    Rectangle()
+                        .overlay(alignment: .trailing) {
+                            Rectangle()
+                                .frame(width: 17)
+                                .offset(x: 10)
+                                .blendMode(.destinationOut)
+                        }
+                )
+        }
+        .compositingGroup()
+        .shadow(color: Color.black.opacity(0.22), radius: 8, y: 5)
     }
 }
 
@@ -814,7 +880,7 @@ private struct ChatFieldStyle: TextFieldStyle {
 
 private struct MessageRow: View {
     let author: String
-    let authorColor: Color
+    let authorPresence: XTalkPresence
     let user: XTalkUser?
     let managerName: String?
     let messageBody: String
@@ -824,14 +890,10 @@ private struct MessageRow: View {
         VStack(alignment: .leading, spacing: 4) {
             if let user {
                 UserHoverAnchor(user: user, managerName: managerName) {
-                    Text(author)
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(authorColor)
+                    authorLabel
                 }
             } else {
-                Text(author)
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(authorColor)
+                authorLabel
             }
             Text(messageBody)
                 .font(.system(size: 13))
@@ -848,6 +910,29 @@ private struct MessageRow: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(Color.white.opacity(0.08), lineWidth: 1)
         )
+    }
+
+    private var authorLabel: some View {
+        HStack(spacing: 6) {
+            Text(author)
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(.white)
+            Circle()
+                .fill(color(for: authorPresence))
+                .frame(width: 7, height: 7)
+                .overlay(Circle().stroke(Color.white.opacity(0.14), lineWidth: 1))
+        }
+    }
+
+    private func color(for presence: XTalkPresence) -> Color {
+        switch presence {
+        case .offline:
+            return Color.white.opacity(0.55)
+        case .brb:
+            return Color(red: 1.0, green: 0.60, blue: 0.29)
+        case .online:
+            return Color(red: 0.35, green: 0.87, blue: 0.56)
+        }
     }
 }
 

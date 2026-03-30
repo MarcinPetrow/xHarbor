@@ -69,6 +69,56 @@ select {
   border-bottom: 1px solid var(--line);
 }
 
+.shell-root.shell-compact {
+  padding-bottom: 50px;
+}
+
+.shell-root.shell-compact .shell-topbar {
+  min-height: 56px;
+  padding: 8px 14px;
+  gap: 12px;
+  background: #151618;
+  border-bottom: 0;
+  box-shadow: none;
+}
+
+.shell-root.shell-compact .topbar-brand {
+  gap: 10px;
+}
+
+.shell-root.shell-compact .brand-mark {
+  width: 28px;
+  height: 28px;
+  flex-basis: 28px;
+}
+
+.shell-root.shell-compact .brand-title {
+  font-size: 1rem;
+}
+
+.shell-root.shell-compact .brand-subtitle {
+  font-size: 0.76rem;
+}
+
+.shell-root.shell-compact .shell-main {
+  padding: 0 0 20px;
+}
+
+.shell-root.shell-compact .view-switcher {
+  margin: 0;
+}
+
+.shell-root.shell-compact .view-switcher-item {
+  min-width: 128px;
+  padding: 7px 10px;
+}
+
+.shell-root.shell-compact .shell-footer {
+  left: 6px;
+  right: 6px;
+  bottom: 6px;
+}
+
 .topbar-brand {
   display: flex;
   align-items: center;
@@ -77,12 +127,11 @@ select {
 }
 
 .brand-mark {
-  width: 32px;
-  height: 32px;
-  border-radius: 10px;
-  background:
-    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.9), transparent 28%),
-    radial-gradient(circle at 50% 50%, var(--accent) 0%, var(--accent-strong) 72%, rgba(255, 123, 50, 0.22) 100%);
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  display: block;
+  object-fit: contain;
 }
 
 .brand-copy {
@@ -313,6 +362,10 @@ select {
   margin-bottom: 18px;
 }
 
+.main-header.hidden {
+  display: none;
+}
+
 .header-copy {
   min-width: 0;
 }
@@ -435,6 +488,13 @@ select {
 .content-panel {
   grid-column: span 6;
   padding: 16px;
+}
+
+.content-panel.panel-bare {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: 0;
 }
 
 .content-panel.span-12 {

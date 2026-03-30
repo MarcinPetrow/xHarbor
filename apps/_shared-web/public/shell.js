@@ -88,15 +88,18 @@
   }
 
   function renderPanel(panel) {
+    const hasHeading = Boolean(panel.title || panel.copy || panel.badge);
     return `
-      <section class="content-panel ${escapeHTML(panel.span || "")}">
-        <div class="panel-heading">
-          <div>
-            <h2 class="panel-title">${escapeHTML(panel.title)}</h2>
-            ${panel.copy ? `<p class="panel-copy">${escapeHTML(panel.copy)}</p>` : ""}
+      <section class="content-panel ${escapeHTML(panel.span || "")} ${escapeHTML(panel.className || "")}">
+        ${hasHeading ? `
+          <div class="panel-heading">
+            <div>
+              ${panel.title ? `<h2 class="panel-title">${escapeHTML(panel.title)}</h2>` : ""}
+              ${panel.copy ? `<p class="panel-copy">${escapeHTML(panel.copy)}</p>` : ""}
+            </div>
+            ${panel.badge ? `<span class="panel-badge">${escapeHTML(panel.badge)}</span>` : ""}
           </div>
-          ${panel.badge ? `<span class="panel-badge">${escapeHTML(panel.badge)}</span>` : ""}
-        </div>
+        ` : ""}
         ${panel.html}
       </section>
     `;
@@ -156,10 +159,10 @@
     applyPreferences(state.preferences);
 
     root.innerHTML = `
-      <div class="shell-root">
+      <div class="shell-root${config.shellClassName ? ` ${escapeHTML(config.shellClassName)}` : ""}">
         <header class="shell-topbar">
           <div class="topbar-brand">
-            <div class="brand-mark" aria-hidden="true"></div>
+            <img class="brand-mark" src="/shared/platform-mark.svg" alt="" aria-hidden="true">
             <div class="brand-copy">
               <p class="brand-title">xHarbor:${escapeHTML(config.appName)}</p>
               <p class="brand-subtitle">${escapeHTML(config.appSubtitle)}</p>
@@ -213,6 +216,7 @@
 
     const refs = {
       nav: document.getElementById("shell-nav"),
+      mainHeader: root.querySelector(".main-header"),
       viewTitle: document.getElementById("view-title"),
       viewSubtitle: document.getElementById("view-subtitle"),
       viewBadge: document.getElementById("view-badge"),
@@ -281,11 +285,12 @@
         : "Signed in";
     }
 
-    function setHeader(title, subtitle, badge = "") {
+    function setHeader(title, subtitle, badge = "", options = {}) {
       refs.viewTitle.textContent = title;
       refs.viewSubtitle.textContent = subtitle;
       refs.viewBadge.textContent = badge;
       refs.viewBadge.style.display = badge ? "inline-flex" : "none";
+      refs.mainHeader.classList.toggle("hidden", Boolean(options.hidden));
     }
 
     function setMetrics(metrics) {
