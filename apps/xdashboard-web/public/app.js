@@ -82,6 +82,7 @@ function denseTable(headers, rows) {
 const shell = shellAPI.createShell({
   appName: "xDashboard",
   appSubtitle: "Cross-module reporting center",
+  shellClassName: "shell-platform",
   defaultView: "overview",
   navigation: [
     {

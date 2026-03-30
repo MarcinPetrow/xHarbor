@@ -5,9 +5,10 @@
 
 .dense-table {
   display: grid;
-  border: 1px solid var(--line);
-  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
   overflow: hidden;
+  background: linear-gradient(180deg, rgba(16, 18, 19, 0.96), rgba(18, 21, 24, 0.94));
 }
 
 .dense-row {
@@ -15,8 +16,8 @@
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 10px;
   padding: 9px 12px;
-  border-top: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.02);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.015);
 }
 
 .dense-row:first-child {
@@ -24,7 +25,7 @@
 }
 
 .dense-head {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .dense-head .dense-cell {
@@ -71,9 +72,9 @@
   justify-content: space-between;
   gap: 12px;
   padding: 12px 14px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(16, 18, 19, 0.96), rgba(18, 21, 24, 0.94));
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .event-row strong {

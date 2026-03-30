@@ -1,8 +1,9 @@
 .chat-neon-surface {
   --chat-sidebar-surface: #101213;
+  --chat-rail-width: 280px;
   position: relative;
   display: grid;
-  grid-template-columns: 260px minmax(0, 1fr) 260px;
+  grid-template-columns: var(--chat-rail-width) minmax(0, 1fr) var(--chat-rail-width);
   gap: 0;
   min-height: 700px;
   padding: 0;

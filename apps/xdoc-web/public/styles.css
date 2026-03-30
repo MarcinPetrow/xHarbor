@@ -1,25 +1,141 @@
-.doc-workspace {
+.doc-shell {
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
-  gap: 12px;
+  gap: 0;
+  min-height: 720px;
+  border-radius: 0 0 24px 24px;
+  overflow: hidden;
 }
 
 .doc-sidebar,
-.doc-editor-grid,
-.doc-details-grid,
 .doc-preview,
-.doc-history {
+.doc-history,
+.doc-main-grid {
   display: grid;
   gap: 10px;
 }
 
 .doc-sidebar {
   align-content: start;
+  padding: 12px 10px;
+  background: #101213;
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.04);
+}
+
+.doc-main {
+  min-width: 0;
+}
+
+.doc-document {
+  display: grid;
+  gap: 12px;
+  min-height: 100%;
+  padding: 12px;
+  background:
+    radial-gradient(circle at 18% 82%, rgba(88, 255, 207, 0.12), transparent 24%),
+    radial-gradient(circle at 72% 18%, rgba(255, 119, 196, 0.12), transparent 22%),
+    linear-gradient(180deg, #1b1c20 0%, #17171c 18%, #121217 100%);
+}
+
+.doc-document-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(135deg, rgba(255, 131, 191, 0.18), rgba(137, 121, 255, 0.1) 44%, rgba(255, 173, 126, 0.16));
+}
+
+.doc-document-copy {
+  min-width: 0;
+}
+
+.doc-document-copy h2 {
+  margin: 0;
+  font-size: 1.3rem;
+}
+
+.doc-document-copy p {
+  margin: 5px 0 0;
+  color: var(--text-2);
+  font-size: 0.82rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.doc-mode-actions {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.doc-icon-button {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(8, 10, 16, 0.36);
+  color: var(--text-1);
+  font-size: 0.95rem;
+}
+
+.doc-icon-button.active {
+  border-color: rgba(214, 255, 243, 0.18);
+  background: linear-gradient(135deg, rgba(255, 191, 156, 0.18), rgba(196, 238, 219, 0.14));
+}
+
+.doc-main-grid {
+  grid-template-columns: minmax(0, 1fr) 280px;
 }
 
 .doc-tree {
   display: grid;
   gap: 6px;
+}
+
+.doc-tree-node {
+  display: grid;
+  gap: 4px;
+}
+
+.doc-tree-row {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 6px;
+  align-items: center;
+  padding-left: calc(var(--doc-depth, 0) * 14px);
+}
+
+.doc-tree-children {
+  display: grid;
+  gap: 4px;
+}
+
+.doc-tree-toggle,
+.doc-tree-toggle-spacer {
+  width: 18px;
+  height: 18px;
+}
+
+.doc-tree-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-3);
+  font-size: 0.72rem;
+  transform: rotate(180deg);
+}
+
+.doc-tree-toggle.expanded {
+  transform: rotate(0deg);
 }
 
 .doc-tree-item {
@@ -29,56 +145,97 @@
   gap: 8px;
   width: 100%;
   min-height: 34px;
-  padding: 6px 10px;
-  border-radius: 10px;
-  border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.025);
+  padding: 5px 8px 5px 7px;
+  border-radius: 999px;
+  border: 0;
+  background: transparent;
   color: var(--text-1);
   text-align: left;
+  min-width: 0;
+  transition: transform 140ms ease, background 140ms ease, box-shadow 140ms ease, opacity 140ms ease;
+}
+
+.doc-tree-item:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .doc-tree-item.active {
-  border-color: var(--accent-ring);
-  background: rgba(255, 255, 255, 0.05);
-  box-shadow: inset 2px 0 0 var(--accent);
+  background: linear-gradient(135deg, rgba(255, 191, 156, 0.92), rgba(196, 238, 219, 0.94));
+  box-shadow:
+    inset 0 0 0 1px rgba(214, 255, 243, 0.3),
+    0 0 18px rgba(169, 248, 222, 0.13);
 }
 
-.doc-tree-item strong,
-.doc-tree-item span {
+.doc-tree-item-trigger {
   min-width: 0;
+  flex: 1 1 auto;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
 }
 
 .doc-tree-item strong {
   display: block;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.84rem;
+  font-size: 0.8rem;
+  font-weight: 650;
+  line-height: 1;
+  color: rgba(244, 245, 242, 0.92);
 }
 
-.doc-tree-item span {
-  color: var(--text-3);
-  font-size: 0.72rem;
-  white-space: nowrap;
+.doc-tree-item.active strong {
+  color: rgba(62, 76, 72, 0.78);
 }
 
-.doc-editor-grid {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+.doc-tree-add {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-1);
+  font-size: 1rem;
+  line-height: 1;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 140ms ease, background 140ms ease, border-color 140ms ease;
 }
 
-.doc-details-grid {
-  display: grid;
-  gap: 12px;
-  align-content: start;
+.doc-tree-item:hover .doc-tree-add,
+.doc-tree-item.active .doc-tree-add {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.doc-tree-add:hover {
+  border-color: rgba(214, 255, 243, 0.18);
+  background: linear-gradient(135deg, rgba(255, 191, 156, 0.18), rgba(196, 238, 219, 0.14));
+}
+
+.doc-tree-item.active .doc-tree-add {
+  background: rgba(8, 10, 16, 0.52);
+  border-color: rgba(25, 29, 34, 0.9);
+  color: var(--text-1);
 }
 
 .doc-field,
 .doc-preview-body,
 .doc-metadata,
 .doc-revision-table {
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(16, 18, 19, 0.96), rgba(18, 21, 24, 0.94));
 }
 
 .doc-field {
@@ -100,7 +257,7 @@
 .doc-field select,
 .doc-field textarea {
   width: 100%;
-  border: 1px solid var(--line);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.04);
   color: var(--text-1);
@@ -155,7 +312,11 @@
   overflow: auto;
   padding: 10px 12px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.doc-editor {
+  min-width: 0;
 }
 
 .doc-meta-grid {
@@ -205,13 +366,14 @@
 .doc-inline-actions {
   display: flex;
   gap: 8px;
-  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: nowrap;
 }
 
 @media (max-width: 1080px) {
-  .doc-workspace,
-  .doc-editor-grid,
-  .doc-details-grid {
+  .doc-shell,
+  .doc-main-grid {
     grid-template-columns: 1fr;
   }
 

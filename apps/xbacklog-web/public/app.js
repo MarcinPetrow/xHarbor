@@ -119,6 +119,7 @@ function filterTasks(tasks, projects) {
 const shell = shellAPI.createShell({
   appName: "xBacklog",
   appSubtitle: "Projects and delivery workflow",
+  shellClassName: "shell-platform",
   defaultView: "board",
   navigation: [
     {

@@ -130,6 +130,7 @@ async function destroySession() {
 const shell = shellAPI.createShell({
   appName: "xGroup",
   appSubtitle: "Organization source of truth",
+  shellClassName: "shell-group",
   defaultView: "overview",
   navigation: [
     {
