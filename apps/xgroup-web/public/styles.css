@@ -88,8 +88,346 @@
   white-space: nowrap;
 }
 
+.org-tree {
+  overflow: auto;
+  padding: 4px 0 12px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+  max-height: 72vh;
+}
+
+.org-tree-canvas {
+  min-height: 100%;
+  position: relative;
+  padding: 16px 40px 24px;
+  width: max-content;
+  min-width: 100%;
+  box-sizing: border-box;
+}
+
+.org-tree-lines {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.org-tree-lines [data-org-line] {
+  transition: stroke 140ms ease, stroke-width 140ms ease, opacity 140ms ease;
+}
+
+.org-tree-lines .org-line-highlight {
+  stroke: var(--accent);
+  stroke-width: 2;
+  opacity: 0.95;
+}
+
+.org-tree-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.org-layout-toggle {
+  display: inline-flex;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.org-layout-button {
+  border: 0;
+  background: transparent;
+  color: var(--text-3);
+  padding: 7px 12px;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.org-layout-button.active {
+  background: var(--accent-soft);
+  color: var(--text-1);
+}
+
+.org-tree-level {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 26px;
+  display: grid;
+  gap: 14px;
+}
+
+.org-tree-level.root {
+  padding-left: 0;
+}
+
+.org-branch {
+  position: relative;
+  display: grid;
+  gap: 12px;
+}
+
+.org-tree-level:not(.root) > .org-branch::before {
+  content: "";
+  position: absolute;
+  left: -16px;
+  top: -16px;
+  bottom: -14px;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.org-tree-level:not(.root) > .org-branch:last-child::before {
+  bottom: calc(100% - 32px);
+}
+
+.org-branch-node {
+  position: relative;
+}
+
+.org-tree-level:not(.root) > .org-branch > .org-branch-node::before {
+  content: "";
+  position: absolute;
+  left: -16px;
+  top: 32px;
+  width: 16px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.org-children {
+  margin-left: 28px;
+}
+
+.org-tree.horizontal .org-tree-level.root {
+  display: grid;
+  gap: 28px;
+  width: fit-content;
+  min-width: fit-content;
+  margin: 0 auto;
+}
+
+.org-tree.horizontal .org-tree-level.root > .org-branch {
+  width: fit-content;
+  margin: 0 auto;
+}
+
+.org-tree.horizontal .org-tree-level {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0;
+  width: max-content;
+}
+
+.org-tree.horizontal .org-tree-level:not(.root) > .org-branch::before,
+.org-tree.horizontal .org-tree-level:not(.root) > .org-branch > .org-branch-node::before {
+  display: none;
+}
+
+.org-tree.horizontal .org-children > .org-tree-level {
+  padding-left: 0;
+  padding-top: 32px;
+  position: relative;
+  width: fit-content;
+  margin: 0 auto;
+}
+
+.org-tree.horizontal .org-children > .org-tree-level > .org-branch {
+  padding-top: 32px;
+  flex: 0 0 auto;
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+.org-tree.horizontal .org-children > .org-tree-level > .org-branch:only-child {
+  padding-top: 0;
+}
+
+.org-tree.horizontal .org-branch-node {
+  display: flex;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+}
+
+.org-tree.horizontal .org-children {
+  margin-left: 0;
+  display: flex;
+  justify-content: center;
+}
+
+.org-tree.horizontal .org-card {
+  min-width: 280px;
+  max-width: 340px;
+}
+
+.org-tree.horizontal {
+  cursor: grab;
+}
+
+.org-tree.horizontal.dragging {
+  cursor: grabbing;
+  user-select: none;
+}
+
+.org-card {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: linear-gradient(180deg, rgba(16, 18, 19, 0.96), rgba(18, 21, 24, 0.94));
+  cursor: pointer;
+  transition: border-color 140ms ease, box-shadow 140ms ease, background 140ms ease;
+}
+
+.org-branch-selected > .org-branch-node .org-card {
+  border-color: var(--accent-ring);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.02), 0 0 0 3px var(--accent-soft);
+  background: linear-gradient(180deg, rgba(20, 24, 26, 0.98), rgba(24, 28, 31, 0.96));
+}
+
+.org-toggle {
+  width: 28px;
+  height: 28px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-2);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.org-toggle-placeholder {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.org-avatar {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(255, 188, 145, 0.95), rgba(192, 142, 255, 0.86));
+  color: rgba(20, 14, 22, 0.9);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.org-card-main {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.org-card-main strong {
+  font-size: 0.92rem;
+}
+
+.org-card-sub {
+  color: var(--text-2);
+  font-size: 0.82rem;
+}
+
+.org-card-meta {
+  color: var(--text-3);
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+.org-card-side {
+  display: grid;
+  gap: 5px;
+  justify-items: end;
+  text-align: right;
+}
+
 @media (max-width: 720px) {
   .dense-row {
     grid-template-columns: 1fr;
+  }
+
+  .org-card {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .org-card-side {
+    grid-column: 1 / -1;
+    justify-items: start;
+    text-align: left;
+  }
+
+  .org-tree-level {
+    padding-left: 18px;
+  }
+
+  .org-tree-toolbar {
+    align-items: stretch;
+  }
+
+  .org-layout-toggle {
+    width: 100%;
+  }
+
+  .org-layout-button {
+    flex: 1;
+  }
+
+  .org-tree-level:not(.root) > .org-branch::before,
+  .org-tree-level:not(.root) > .org-branch > .org-branch-node::before {
+    left: -12px;
+  }
+
+  .org-tree-level:not(.root) > .org-branch > .org-branch-node::before {
+    width: 12px;
+  }
+
+  .org-toggle-placeholder {
+    display: none;
+  }
+
+  .org-children {
+    margin-left: 14px;
+  }
+
+  .org-tree.horizontal .org-children > .org-tree-level {
+    display: grid;
+    justify-content: stretch;
+    gap: 14px;
+    padding-top: 16px;
+    width: auto;
+  }
+
+  .org-tree.horizontal .org-children > .org-tree-level > .org-branch {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .org-tree.horizontal .org-card {
+    min-width: 0;
+    max-width: none;
+  }
+
+  .org-tree.horizontal {
+    cursor: auto;
   }
 }
