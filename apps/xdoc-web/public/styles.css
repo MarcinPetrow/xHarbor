@@ -18,6 +18,7 @@
 .doc-sidebar {
   align-content: start;
   padding: 12px 10px;
+  border-bottom-right-radius: 24px;
   background: #101213;
   box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.04);
 }
