@@ -161,6 +161,7 @@ Primary local persistence uses SQLite at:
 
 ## Docs
 
+- [docs/wiki/README.md](docs/wiki/README.md)
 - [docs/product/vision.md](docs/product/vision.md)
 - [docs/architecture/monorepo.md](docs/architecture/monorepo.md)
 - [docs/architecture/domain-model.md](docs/architecture/domain-model.md)

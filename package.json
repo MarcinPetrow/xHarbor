@@ -27,6 +27,10 @@
     "workspace:restart": "node scripts/dev-stack.mjs workspace-restart",
     "workspace:status": "node scripts/dev-stack.mjs workspace-status",
     "workspace:logs": "node scripts/dev-stack.mjs workspace-logs",
+    "docs:screenshots": "node scripts/capture-docs-screenshots.mjs",
     "test": "node --test packages/*/test/*.test.js apps/*/test/*.test.js"
+  },
+  "devDependencies": {
+    "playwright": "^1.58.2"
   }
 }
