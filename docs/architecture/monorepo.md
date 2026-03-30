@@ -1,64 +1,85 @@
 # Monorepo Architecture
 
-## Recommended structure
+## Current structure
 
 ```text
 xHarbor/
   apps/
-    xbacklog-web/
+    _shared-web/
+    xgroup-api/
     xgroup-web/
+    xbacklog-api/
+    xbacklog-web/
+    xdashboard-api/
     xdashboard-web/
+    xtalk-api/
     xtalk-web/
+    xdoc-api/
+    xdoc-web/
     xtalk-macos/
   packages/
     contracts/
-    auth/
-    design-system/
-    analytics/
-  services/
-    identity/
-    messaging/
-    work-management/
-    reporting/
+    platform-auth/
+    platform-session/
+    sqlite-store/
   docs/
+  Sources/
+  Tests/
   Package.swift
 ```
 
-`Package.swift` exists only for the native `xtalk-macos` app and `XTalkDomain`.
+`Package.swift` exists for the native `xtalk-macos` client and `XTalkDomain`. Web and backend modules run through the Node workspace defined in the repository root `package.json`.
 
 ## Architectural rules
 
 ### 1. xGroup is authoritative
 
-`xGroup` owns identity and team structure.
-Other apps may cache data for performance, but they do not own user or team truth.
+`xGroup` owns users, teams, memberships, invitations, sessions, and reporting relationships.
+Other modules may cache organizational data for performance, but they do not own that truth.
 
 ### 2. Contracts first
 
-Shared packages should define:
+Shared packages define the cross-module shape of the platform:
 
 - IDs
-- core enums
-- event names
+- roles and statuses
 - permission scopes
-- DTOs used between apps and services
+- shared state conventions
+- cross-module payload shapes
 
 ### 3. App-specific domains stay isolated
 
-`xBacklog` should not know internal chat details.
-`xTalk` should not know backlog workflow rules.
-Cross-app integration should happen through contracts and events.
+`xBacklog` owns planning state.
+`xTalk` owns communication state.
+`xDoc` owns documentation state.
+`xDashboard` remains downstream from operational systems.
 
-### 4. Reporting is downstream
+Cross-app integration should happen through contracts, read models, and explicit service boundaries.
 
-`xDashboard` should consume events and read models.
-It should not become a hidden coupling point for operational writes.
+### 4. Shared shell is a platform concern
 
-## Suggested implementation order
+Web apps share one shell and common browser-side helpers through `apps/_shared-web`.
+That keeps branding, navigation patterns, settings, and common interaction layers aligned without merging domain logic.
+
+### 5. Local persistence stays simple
+
+Local development persistence uses one SQLite database at `data/sqlite/xharbor.db`.
+This keeps the stack easy to run while preserving state across the active modules.
+
+## Runtime model
+
+- each domain module has its own API app
+- each web-facing domain has its own web app
+- `xTalk` also has a native macOS client
+- shared browser UI lives in `_shared-web`
+- shared backend concerns live in `packages/*`
+
+## Suggested implementation order for future modules
 
 1. `xGroup`
 2. `xBacklog`
 3. `xTalk`
-4. `xDashboard`
+4. `xDoc`
+5. `xDashboard`
 
-That order reduces rework because identity and organization boundaries are established first.
+That order keeps identity and organization boundaries stable before more downstream modules are built on top of them.

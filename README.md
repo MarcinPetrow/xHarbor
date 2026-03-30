@@ -7,13 +7,13 @@ xHarbor is an open source platform for running software delivery teams. It combi
   <img src="./go_home.png" alt="Bold Merge" width="180" valign="middle">
 </p>
 
-It is positioned as an open alternative to fragmented delivery tooling. The goal is not to replace every workflow with one giant app, but to unify the core system boundaries that teams usually spread across separate products.
+xHarbor is designed as an open alternative to fragmented delivery tooling. The platform keeps each module focused on its own domain while sharing identity, contracts, and runtime foundations across the system.
 
 ## Why xHarbor
 
-Most delivery organizations operate across disconnected tools for identity, planning, communication, and documentation. That fragmentation creates duplicated data, unclear ownership, and weak runtime boundaries between systems.
+Most delivery organizations spread their operating model across separate tools for identity, planning, communication, reporting, and documentation. That fragmentation creates duplicated data, unclear ownership boundaries, and brittle integrations.
 
-xHarbor aims to unify those concerns with shared domain models, shared contracts, and explicit module boundaries. Each application stays focused on its own job while still participating in one coherent platform.
+xHarbor brings those concerns into one platform with explicit module boundaries, shared contracts, and a local-first development workflow. The goal is not one giant app. The goal is one coherent system.
 
 ## Quick start
 
@@ -36,27 +36,28 @@ The stack launcher manages all Node APIs and web apps together.
 
 ### xGroup
 
-`xGroup` is the source of truth for people, teams, memberships, invitations, and session-aware identity data.
+`xGroup` is the organizational backbone of the platform. It owns people, teams, memberships, invitations, sessions, and reporting structure.
 
 Responsibilities:
 - organization and team directory
-- user lifecycle and status
+- user lifecycle, status, and manager relationships
 - memberships and invitations
 - session administration
+- organizational structure chart
 
 ### xBacklog
 
-`xBacklog` is the planning and execution module for projects and tasks. It consumes workspace structure from `xGroup`.
+`xBacklog` is the work management module for projects and tasks. It consumes team and user structure from `xGroup`.
 
 Responsibilities:
-- team-owned projects
+- projects and delivery scope
 - task board with `new -> in_progress -> done`
 - task detail, comments, and change history
-- board filtering and drag-and-drop workflow
+- filtering and drag-and-drop workflow
 
 ### xDashboard
 
-`xDashboard` is the reporting surface for cross-module insights built from `xGroup` and `xBacklog`.
+`xDashboard` is the reporting surface for cross-module delivery insights built from `xGroup` and `xBacklog`.
 
 Responsibilities:
 - executive overview
@@ -71,25 +72,25 @@ Responsibilities:
 Responsibilities:
 - team rooms
 - direct conversations
-- unread state and mark-as-read actions
+- unread state and mark-as-read flows
 - shared web and native chat experience
 - presence with automatic inactivity handling
 
 ### xDoc
 
-`xDoc` is the documentation workspace for structured Markdown pages and revision history.
+`xDoc` is the documentation workspace for structured Markdown content with revision history.
 
 Responsibilities:
-- hierarchical page tree
-- Markdown authoring and preview
-- page-level revision history
-- author and editor traceability
+- hierarchical document tree
+- Markdown preview and edit flows
+- per-page revision history
+- authorship and change traceability
 
 ## Architecture
 
-xHarbor is a modular monorepo. Each domain module has its own API and web app. Modules share contracts and platform services where that reduces duplication without collapsing boundaries.
+xHarbor is a modular monorepo. Each domain module has its own API and web app. Modules share contracts and platform services where that reduces duplication without collapsing ownership boundaries.
 
-`xTalk` also has a native macOS client implemented in Swift. The active backend and web runtime path is Node. Local persistence uses SQLite.
+`xTalk` also has a native macOS client implemented in Swift. The active runtime path for web and backend modules is Node. Local persistence uses SQLite.
 
 ## Design principles
 
@@ -100,7 +101,7 @@ xHarbor is a modular monorepo. Each domain module has its own API and web app. M
 
 ## Shared packages
 
-- `packages/contracts`: shared demo state, constants, and contract helpers
+- `packages/contracts`: shared state shapes, contract helpers, and cross-module data conventions
 - `packages/platform-auth`: authorization rules and permission checks
 - `packages/platform-session`: session handling and presence state
 - `packages/sqlite-store`: SQLite-backed document persistence

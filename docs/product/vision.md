@@ -2,42 +2,39 @@
 
 ## Problem
 
-Development teams usually combine separate tools for work tracking, chat, identity, and reporting.
-That creates duplicate data, fragmented permissions, and unreliable reporting.
+Software delivery organizations usually run on separate tools for identity, planning, communication, documentation, and reporting. That creates duplicated data, unclear ownership boundaries, and reporting that depends on fragile cross-tool synchronization.
 
 ## Goal
 
-xHarbor should provide one platform where team structure, delivery work, communication, and reporting all use the same organizational model.
+xHarbor should provide one modular platform where team structure, delivery work, communication, documentation, and reporting operate on the same organizational model.
+
+The platform is not intended to collapse everything into one giant application. Each module should stay focused on one domain while sharing contracts, identity, and runtime foundations with the rest of the system.
 
 ## Product applications
 
 ### xGroup
 
-Platform backbone and single source of truth.
+The authoritative directory and organizational backbone.
 
 Responsibilities:
-
-- users
-- teams
-- membership
-- roles and permissions
+- users and teams
+- memberships and roles
+- invitations and sessions
+- manager relationships and reporting structure
 - organizational metadata used by the rest of the platform
 
 ### xBacklog
 
-Work management for projects and teams.
+Work management for projects and tasks.
 
 Responsibilities:
-
 - projects
-- boards
-- tasks
-- workflow states
+- tasks and workflow states
 - assignments
+- comments and change history
 - delivery planning
 
 Dependencies:
-
 - users and teams from `xGroup`
 
 ### xTalk
@@ -45,36 +42,44 @@ Dependencies:
 Communication layer for the platform.
 
 Responsibilities:
-
 - rooms
-- room membership
-- direct messages
+- direct conversations
+- unread state and read markers
+- presence
 - conversation history
-- notification hooks
 
 Clients:
-
 - web
 - native macOS
 
 Dependencies:
-
 - users and teams from `xGroup`
 
 ### xDashboard
 
-Reporting and analytics hub.
+Reporting and analytics surface.
 
 Responsibilities:
-
-- reusable metrics
-- cross-app reports
-- team and project health dashboards
-- operational insights
+- cross-module reporting snapshots
+- delivery activity views
+- team load views
+- operational risk views
 
 Dependencies:
+- operational data from `xGroup` and `xBacklog`
 
-- event streams and operational data from all platform apps
+### xDoc
+
+Documentation workspace for structured Markdown content.
+
+Responsibilities:
+- hierarchical page tree
+- preview and edit flows
+- revision history
+- authorship and change traceability
+
+Dependencies:
+- authenticated users and organizational metadata from `xGroup`
 
 ## Non-functional priorities
 
@@ -82,5 +87,5 @@ Dependencies:
 - modular architecture
 - strong team and permission model
 - API-first integration boundaries
-- auditable cross-app events
-- clear path for enterprise features later without breaking OSS core
+- auditable operational history
+- clear path for production hardening without breaking the OSS core

@@ -4,16 +4,17 @@
 
 ### Organization
 
-The top-level workspace boundary for the platform.
+Top-level workspace boundary for the platform.
 
 ### Team
 
-A group of users inside an organization.
-Teams can own projects, rooms, and dashboards.
+A delivery group inside an organization.
+Teams are reused across planning, communication, and reporting.
 
 ### User
 
 A person authenticated in the platform.
+User records also carry organizational metadata such as department, title, and manager relationship.
 
 ### Membership
 
@@ -29,32 +30,49 @@ A permission bundle such as:
 - member
 - guest
 
+### Invitation
+
+A pending or accepted request to provision a new user into the workspace.
+
+### Session
+
+An authenticated browser or client session with presence state.
+
 ## App-owned entities
 
 ### xBacklog
 
 - project
-- board
 - task
-- sprint
-- workflow state
+- task comment
+- task status transition
+- task change history
 
 ### xTalk
 
 - room
 - direct conversation
 - message
-- thread
+- read state
+- archived room
 
 ### xDashboard
 
-- metric definition
-- report
-- widget
-- snapshot
+- report snapshot
+- risk view
+- activity view
+- workload view
+
+### xDoc
+
+- page
+- page hierarchy
+- Markdown content revision
+- authorship metadata
 
 ## Cross-app integration examples
 
-- When a team is renamed in `xGroup`, `xBacklog`, `xTalk`, and `xDashboard` receive an event and update their read models.
-- When a task is completed in `xBacklog`, `xDashboard` can use that event for delivery reporting.
-- When a room is created in `xTalk`, membership defaults can be resolved from `xGroup`.
+- When team structure changes in `xGroup`, `xBacklog`, `xTalk`, `xDashboard`, and `xDoc` can consume the updated organizational data.
+- When task activity changes in `xBacklog`, `xDashboard` can use that for delivery reporting.
+- When users authenticate or change presence, `xTalk` can reflect that state in communication flows.
+- When documentation changes in `xDoc`, revision metadata remains tied to users owned by `xGroup`.
