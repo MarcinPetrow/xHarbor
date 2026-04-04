@@ -27,6 +27,193 @@
       .replaceAll("'", "&#39;");
   }
 
+  const TAG_PATTERN = /(^|[^a-z0-9_])#([a-z0-9][a-z0-9_-]*)/gi;
+
+  function normalizeTag(value) {
+    return String(value || "").trim().replace(/^#+/, "").toLowerCase();
+  }
+
+  function buildTagSearchURL(tag) {
+    const normalized = normalizeTag(tag);
+    return `http://127.0.0.1:3005/?query=${encodeURIComponent(normalized)}`;
+  }
+
+  function renderTagText(value) {
+    const input = String(value ?? "");
+    let cursor = 0;
+    let html = "";
+
+    input.replace(TAG_PATTERN, (match, prefix, rawTag, offset) => {
+      html += escapeHTML(input.slice(cursor, offset));
+      html += escapeHTML(prefix);
+      html += `<a class="tag-link" href="${buildTagSearchURL(rawTag)}">#${escapeHTML(rawTag)}</a>`;
+      cursor = offset + match.length;
+      return match;
+    });
+
+    html += escapeHTML(input.slice(cursor));
+    return html;
+  }
+
+  async function requestTagSuggestions(query = "") {
+    const search = query ? `?query=${encodeURIComponent(normalizeTag(query))}` : "";
+    const response = await fetch(`/api/tags${search}`, {
+      credentials: "include",
+      headers: { "Content-Type": "application/json" }
+    });
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const payload = await response.json();
+    return (payload.tags || []).slice(0, 8).map((tag) => ({
+      tag: normalizeTag(tag.tag || tag.displayTag),
+      displayTag: tag.displayTag || `#${normalizeTag(tag.tag)}`
+    }));
+  }
+
+  function attachTagAutocomplete(field) {
+    if (!field || field.dataset.tagAutocompleteBound === "true") {
+      return;
+    }
+
+    field.dataset.tagAutocompleteBound = "true";
+    const menuID = `tag-autocomplete-${field.id || Math.random().toString(36).slice(2)}`;
+    document.getElementById(menuID)?.remove();
+    const menu = document.createElement("div");
+    menu.id = menuID;
+    menu.className = "tag-autocomplete-menu";
+    document.body.appendChild(menu);
+
+    let suggestions = [];
+    let activeIndex = 0;
+    let blurTimer = null;
+    let requestVersion = 0;
+
+    function hideMenu() {
+      menu.classList.remove("open");
+      menu.innerHTML = "";
+      suggestions = [];
+      activeIndex = 0;
+    }
+
+    function positionMenu() {
+      if (!menu.classList.contains("open")) return;
+      const rect = field.getBoundingClientRect();
+      menu.style.left = `${Math.max(12, Math.min(rect.left, window.innerWidth - 292))}px`;
+      menu.style.top = `${rect.bottom + 6}px`;
+      menu.style.width = `${Math.min(Math.max(rect.width, 220), 280)}px`;
+    }
+
+    function currentTrigger() {
+      const value = field.value || "";
+      const caret = typeof field.selectionStart === "number" ? field.selectionStart : value.length;
+      const beforeCaret = value.slice(0, caret);
+      const match = beforeCaret.match(/(^|\s)#([a-z0-9_-]*)$/i);
+      if (!match) return null;
+      const query = normalizeTag(match[2] || "");
+      return {
+        query,
+        start: caret - (match[2] || "").length - 1,
+        end: caret
+      };
+    }
+
+    function renderMenu() {
+      if (!suggestions.length) {
+        hideMenu();
+        return;
+      }
+
+      menu.innerHTML = suggestions.map((item, index) => `
+        <button class="tag-autocomplete-item${index === activeIndex ? " active" : ""}" type="button" data-tag-option="${escapeHTML(item.tag)}">
+          <strong>${escapeHTML(item.displayTag)}</strong>
+        </button>
+      `).join("");
+      menu.classList.add("open");
+      positionMenu();
+      menu.querySelectorAll("[data-tag-option]").forEach((button, index) => {
+        button.addEventListener("mousedown", (event) => {
+          event.preventDefault();
+          applySuggestion(index);
+        });
+      });
+    }
+
+    function applySuggestion(index) {
+      const trigger = currentTrigger();
+      const suggestion = suggestions[index];
+      if (!trigger || !suggestion) return;
+      const value = field.value || "";
+      const replacement = `#${suggestion.tag} `;
+      field.value = `${value.slice(0, trigger.start)}${replacement}${value.slice(trigger.end)}`;
+      const caret = trigger.start + replacement.length;
+      field.setSelectionRange(caret, caret);
+      field.dispatchEvent(new Event("input", { bubbles: true }));
+      hideMenu();
+      field.focus();
+    }
+
+    async function refreshSuggestions() {
+      const trigger = currentTrigger();
+      if (!trigger) {
+        hideMenu();
+        return;
+      }
+
+      const version = ++requestVersion;
+      const nextSuggestions = await requestTagSuggestions(trigger.query);
+      if (version !== requestVersion) {
+        return;
+      }
+      suggestions = nextSuggestions;
+      activeIndex = 0;
+      renderMenu();
+    }
+
+    field.addEventListener("input", refreshSuggestions);
+    field.addEventListener("click", refreshSuggestions);
+    field.addEventListener("focus", refreshSuggestions);
+    field.addEventListener("blur", () => {
+      blurTimer = window.setTimeout(hideMenu, 120);
+    });
+    field.addEventListener("keydown", (event) => {
+      if (!menu.classList.contains("open")) return;
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        activeIndex = (activeIndex + 1) % suggestions.length;
+        renderMenu();
+      }
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        activeIndex = (activeIndex - 1 + suggestions.length) % suggestions.length;
+        renderMenu();
+      }
+      if (event.key === "Enter" || event.key === "Tab") {
+        const trigger = currentTrigger();
+        if (!trigger) return;
+        event.preventDefault();
+        applySuggestion(activeIndex);
+      }
+      if (event.key === "Escape") {
+        hideMenu();
+      }
+    });
+
+    menu.addEventListener("mouseenter", () => {
+      if (blurTimer) {
+        window.clearTimeout(blurTimer);
+        blurTimer = null;
+      }
+    });
+    menu.addEventListener("mouseleave", () => {
+      blurTimer = window.setTimeout(hideMenu, 120);
+    });
+    window.addEventListener("resize", positionMenu, { passive: true });
+    window.addEventListener("scroll", positionMenu, { passive: true });
+  }
+
   function readCookie(name) {
     const prefix = `${name}=`;
     const cookie = document.cookie
@@ -510,6 +697,12 @@
     refs.userHoverCard.addEventListener("mouseleave", hideUserCard);
     window.addEventListener("scroll", hideUserCard, { passive: true });
 
+    refs.viewContent.addEventListener("click", (event) => {
+      const tagLink = event.target.closest(".tag-link");
+      if (!tagLink) return;
+      event.stopPropagation();
+    }, true);
+
     refs.nav.addEventListener("click", async (event) => {
       const button = event.target.closest("[data-view-id]");
       if (!button) return;
@@ -558,6 +751,10 @@
     accents,
     timezones,
     escapeHTML,
+    normalizeTag,
+    buildTagSearchURL,
+    renderTagText,
+    attachTagAutocomplete,
     createShell,
     formatDateTime,
     renderEmpty,

@@ -476,6 +476,17 @@ select {
   box-shadow: 0 0 0 3px var(--accent-ring);
 }
 
+.tag-link {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.tag-link:hover {
+  color: var(--text-1);
+  text-decoration: underline;
+}
+
 .shell-button,
 .shell-button-secondary,
 .shell-button-danger,
@@ -1012,6 +1023,41 @@ select {
 .user-hover-card.open {
   display: grid;
   gap: 10px;
+}
+
+.tag-autocomplete-menu {
+  position: fixed;
+  z-index: 60;
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+  border-radius: 12px;
+  border: 1px solid var(--line-strong);
+  background: rgba(13, 16, 25, 0.96);
+  box-shadow: 0 18px 48px rgba(2, 5, 18, 0.44);
+  backdrop-filter: blur(18px);
+}
+
+.tag-autocomplete-menu.open {
+  display: flex;
+}
+
+.tag-autocomplete-item {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 10px;
+  color: var(--text-1);
+  background: transparent;
+}
+
+.tag-autocomplete-item.active,
+.tag-autocomplete-item:hover {
+  background: linear-gradient(135deg, rgba(255, 191, 156, 0.16), rgba(196, 238, 219, 0.14));
 }
 
 .hover-card-name {

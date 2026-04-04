@@ -1,5 +1,5 @@
 import http from "node:http";
-import { createDemoTalkState } from "@xharbor/contracts";
+import { createDemoTalkState, extractTags, normalizeTag } from "@xharbor/contracts";
 import { AuthorizationError, authorize, permissions } from "@xharbor/platform-auth";
 import { SqliteStateStore } from "@xharbor/sqlite-store";
 import { SessionStore, parseCookies, sessionCookieName } from "@xharbor/platform-session";
@@ -161,6 +161,74 @@ function buildPayload(actingUserID) {
   };
 }
 
+function buildTalkTagCatalog(actingUserID) {
+  const userMemberships = membershipsForUser(state.workspace, actingUserID);
+  const visibleRooms = state.rooms.filter((room) =>
+    userMemberships.some((membership) => membership.teamID === room.teamID)
+  );
+  const visibleDMs = state.directConversations.filter((conversation) =>
+    canAccessDirectConversation(actingUserID, conversation)
+  );
+
+  const roomItems = visibleRooms.flatMap((room) => {
+    const messages = state.roomMessages.filter((message) => message.conversationID === room.id);
+    const matches = messages
+      .filter((message) => extractTags(message.body).length)
+      .map((message) => ({
+        field: "message",
+        value: message.body,
+        messageID: message.id,
+        authorUserID: message.authorUserID,
+        createdAt: message.createdAt
+      }));
+    const tags = [...new Set(matches.flatMap((match) => extractTags(match.value)))];
+    if (!tags.length) return [];
+
+    return [{
+      source: "xtalk",
+      kind: "room",
+      id: room.id,
+      conversationID: room.id,
+      title: room.name,
+      excerpt: matches.at(-1)?.value || "Conversation contains the requested tag.",
+      teamID: room.teamID,
+      tags,
+      matches
+    }];
+  });
+
+  const directItems = visibleDMs.flatMap((conversation) => {
+    const messages = state.directMessages.filter((message) => message.conversationID === conversation.id);
+    const matches = messages
+      .filter((message) => extractTags(message.body).length)
+      .map((message) => ({
+        field: "message",
+        value: message.body,
+        messageID: message.id,
+        authorUserID: message.authorUserID,
+        createdAt: message.createdAt
+      }));
+    const tags = [...new Set(matches.flatMap((match) => extractTags(match.value)))];
+    if (!tags.length) return [];
+
+    const peerUserID = conversation.participantUserIDs.find((userID) => userID !== actingUserID) || actingUserID;
+    const peer = state.workspace.users.find((user) => user.id === peerUserID);
+    return [{
+      source: "xtalk",
+      kind: "direct",
+      id: conversation.id,
+      conversationID: conversation.id,
+      title: peer?.displayName || peerUserID,
+      excerpt: matches.at(-1)?.value || "Direct conversation contains the requested tag.",
+      participantUserIDs: conversation.participantUserIDs,
+      tags,
+      matches
+    }];
+  });
+
+  return [...roomItems, ...directItems];
+}
+
 async function markConversationRead(actingUserID, conversationID, messages) {
   const lastReadAt = messages.length
     ? messages.reduce((latest, message) => (
@@ -180,6 +248,21 @@ const server = http.createServer(async (request, response) => {
     if (request.method === "GET" && url.pathname === "/api/chat") {
       requireAuthenticated(actingUserID);
       return json(response, 200, buildPayload(actingUserID));
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/tags/catalog") {
+      requireAuthenticated(actingUserID);
+      return json(response, 200, { source: "xtalk", items: buildTalkTagCatalog(actingUserID) });
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/tags/search") {
+      requireAuthenticated(actingUserID);
+      const tag = normalizeTag(url.searchParams.get("tag"));
+      if (!tag) {
+        return json(response, 200, { source: "xtalk", tag: "", items: [] });
+      }
+      const items = buildTalkTagCatalog(actingUserID).filter((item) => item.tags.includes(tag));
+      return json(response, 200, { source: "xtalk", tag, items });
     }
 
     if (request.method === "GET" && url.pathname === "/api/chat/stream") {

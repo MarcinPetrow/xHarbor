@@ -76,6 +76,16 @@ Responsibilities:
 - shared web and native chat experience
 - presence with automatic inactivity handling
 
+### xTag
+
+`xTag` is the cross-system tag indexing and search module. It aggregates case-insensitive hashtag usage across platform sources and exposes a unified discovery layer.
+
+Responsibilities:
+- normalize and index `#tags`
+- aggregate matches across modules
+- expose tag search and reindex flows
+- keep tag usage coherent across source systems
+
 ### xDoc
 
 `xDoc` is the documentation workspace for structured Markdown content with revision history.

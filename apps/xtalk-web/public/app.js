@@ -9,6 +9,28 @@ let presenceAutomationActive = false;
 let currentSessionPresence = "offline";
 const INACTIVITY_TIMEOUT_MS = 60_000;
 
+function readThreadFromLocation() {
+  const url = new URL(window.location.href);
+  const kind = url.searchParams.get("threadKind");
+  const id = url.searchParams.get("threadId");
+  if (!id || (kind !== "room" && kind !== "direct")) {
+    return null;
+  }
+  return { kind, id };
+}
+
+function syncThreadLocation(thread) {
+  const url = new URL(window.location.href);
+  if (thread?.id) {
+    url.searchParams.set("threadKind", thread.kind);
+    url.searchParams.set("threadId", thread.id);
+  } else {
+    url.searchParams.delete("threadKind");
+    url.searchParams.delete("threadId");
+  }
+  window.history.replaceState({}, "", `${url.pathname}${url.search}`);
+}
+
 async function requestJSON(path, options = {}) {
   const response = await fetch(path, {
     credentials: "include",
@@ -207,7 +229,7 @@ function messageItem(author, body, createdAt, formatDateTime, authorPresence = "
       <div class="chat-message-glow"></div>
       <div class="chat-message-shell">
         <h4${authorUserID ? ` data-user-id="${shellAPI.escapeHTML(authorUserID)}"` : ""}>${shellAPI.escapeHTML(author)}${authorPresence ? presenceDot(authorPresence) : ""}</h4>
-        <p>${shellAPI.escapeHTML(body)}</p>
+        <p>${shellAPI.renderTagText(body)}</p>
         <time>${shellAPI.escapeHTML(formatDateTime(createdAt))}</time>
       </div>
     </article>
@@ -302,9 +324,16 @@ shell = shellAPI.createShell({
       ...directThreads.map((thread) => ({ kind: "direct", ...thread }))
     ];
 
+    const locationThread = readThreadFromLocation();
+    if (locationThread && availableThreads.some((thread) => thread.kind === locationThread.kind && thread.id === locationThread.id)) {
+      selectedThread = locationThread;
+    }
+
     if (!availableThreads.some((thread) => thread.kind === selectedThread.kind && thread.id === selectedThread.id)) {
       selectedThread = availableThreads[0] ? { kind: availableThreads[0].kind, id: availableThreads[0].id } : { kind: "room", id: null };
     }
+
+    syncThreadLocation(selectedThread);
 
     const activeRoom = selectedThread.kind === "room" ? payload.rooms.find((room) => room.id === selectedThread.id) : null;
     const activeDirect = selectedThread.kind === "direct" ? payload.directConversations.find((conversation) => conversation.id === selectedThread.id) : null;
@@ -478,7 +507,8 @@ shell = shellAPI.createShell({
 
     document.getElementById("message-form")?.addEventListener("submit", async (event) => {
       event.preventDefault();
-      const body = document.getElementById("message-body").value;
+      const bodyField = document.getElementById("message-body");
+      const body = bodyField.value;
       if (selectedThread.kind === "room") {
         await requestJSON(`/api/rooms/${selectedThread.id}/messages`, {
           method: "POST",
@@ -490,8 +520,11 @@ shell = shellAPI.createShell({
           body: JSON.stringify({ body })
         });
       }
+      bodyField.value = "";
       await refresh();
     });
+
+    shellAPI.attachTagAutocomplete(document.getElementById("message-body"));
 
     document.getElementById("mark-read-button")?.addEventListener("click", async () => {
       if (!selectedThread.id) return;

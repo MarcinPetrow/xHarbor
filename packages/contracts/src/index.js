@@ -1,6 +1,7 @@
 export const TEAM_ROLES = ["owner", "admin", "manager", "member", "guest"];
 export const TASK_STATUSES = ["new", "in_progress", "done"];
 export const USER_STATUSES = ["active", "suspended"];
+export const TAG_PATTERN = /(^|[^a-z0-9_])#([a-z0-9][a-z0-9_-]*)/gi;
 
 export function slugify(value) {
   return value
@@ -8,6 +9,23 @@ export function slugify(value) {
     .trim()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+export function normalizeTag(value) {
+  return String(value ?? "")
+    .trim()
+    .replace(/^#+/, "")
+    .toLowerCase();
+}
+
+export function extractTags(value) {
+  const source = String(value ?? "");
+  const tags = new Set();
+  for (const match of source.matchAll(TAG_PATTERN)) {
+    const normalized = normalizeTag(match[2]);
+    if (normalized) tags.add(normalized);
+  }
+  return [...tags];
 }
 
 export function createDemoWorkspace() {
@@ -83,8 +101,8 @@ export function createDemoBacklogState(workspace) {
         {
           id: "task-auth",
           projectID: "proj-core",
-          title: "Define auth boundaries for xGroup",
-          description: "Document session authority boundaries, ownership rules, and service-to-service trust.",
+          title: "Define #auth boundaries for xGroup",
+          description: "Document #auth session authority boundaries, ownership rules, and service-to-service trust for #platform services.",
           assigneeUserID: "user-marcin",
           status: "in_progress",
           createdAt: "2026-03-29T09:15:00.000Z",
@@ -94,8 +112,8 @@ export function createDemoBacklogState(workspace) {
         {
           id: "task-dashboard",
           projectID: "proj-launch",
-          title: "Prepare reporting KPIs",
-          description: "Define the first KPI set for operational, workflow, and team-level reporting.",
+          title: "Prepare #reporting KPIs",
+          description: "Define the first #reporting KPI set for operational, workflow, and team-level reporting.",
           assigneeUserID: "user-anna",
           status: "new",
           createdAt: "2026-03-29T09:40:00.000Z",
@@ -108,7 +126,7 @@ export function createDemoBacklogState(workspace) {
           id: "comment-task-auth-1",
           taskID: "task-auth",
           authorUserID: "user-marcin",
-          body: "Initial auth boundary review is in progress.",
+          body: "Initial #auth boundary review is in progress for the #platform workspace.",
           createdAt: "2026-03-29T10:05:00.000Z"
         }
       ],
@@ -211,14 +229,14 @@ export function createDemoTalkState() {
         id: "msg-room-1",
         conversationID: "room-platform-core",
         authorUserID: "user-marcin",
-        body: "Kickoff for auth boundaries and platform integration.",
+        body: "Kickoff for #auth boundaries and #platform integration.",
         createdAt: "2026-03-29T10:00:00.000Z"
       },
       {
         id: "msg-room-2",
         conversationID: "room-product-delivery",
         authorUserID: "user-anna",
-        body: "Tracking release readiness and launch dependencies.",
+        body: "Tracking #release readiness and launch dependencies for #reporting.",
         createdAt: "2026-03-29T10:15:00.000Z"
       }
     ],
@@ -233,7 +251,7 @@ export function createDemoTalkState() {
         id: "msg-dm-1",
         conversationID: "dm-user-anna-user-marcin",
         authorUserID: "user-anna",
-        body: "Need final signal on dashboard KPIs before tomorrow.",
+        body: "Need final signal on #dashboard KPIs before tomorrow's #release review.",
         createdAt: "2026-03-29T10:25:00.000Z"
       }
     ],
@@ -278,7 +296,7 @@ export function createDemoDocsState() {
         content: [
           "# Engineering Handbook",
           "",
-          "Welcome to the shared documentation space for xHarbor delivery teams.",
+          "Welcome to the shared documentation space for xHarbor delivery teams and #platform owners.",
           "",
           "## Focus areas",
           "",
@@ -299,7 +317,7 @@ export function createDemoDocsState() {
         content: [
           "## Release Runbook",
           "",
-          "Use this page to capture release readiness checks.",
+          "Use this page to capture #release readiness checks.",
           "",
           "1. validate backlog status",
           "2. confirm ownership",
@@ -322,7 +340,9 @@ export function createDemoDocsState() {
           "",
           "- xGroup directory data",
           "- xTalk collaboration norms",
-          "- xBacklog delivery flow"
+          "- xBacklog delivery flow",
+          "",
+          "Core onboarding themes: #onboarding #platform"
         ].join("\n"),
         createdAt: "2026-03-29T09:45:00.000Z",
         updatedAt: "2026-03-29T09:45:00.000Z",
@@ -431,6 +451,28 @@ export function createDemoDocsState() {
       lastSyncAt: null,
       lastSyncSucceeded: false,
       lastError: "xGroup sync not attempted yet"
+    }
+  };
+}
+
+export function createDemoTagState() {
+  return {
+    aliases: {},
+    index: {
+      tags: [],
+      items: [],
+      sources: [],
+      refreshedAt: null
+    },
+    syncStatus: {
+      sources: {
+        xbacklog: "bootstrap",
+        xtalk: "bootstrap",
+        xdoc: "bootstrap"
+      },
+      lastSyncAt: null,
+      lastSyncSucceeded: false,
+      lastError: "Tag indexing not attempted yet"
     }
   };
 }

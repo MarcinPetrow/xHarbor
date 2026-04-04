@@ -1,5 +1,5 @@
 import http from "node:http";
-import { createDemoDocsState } from "@xharbor/contracts";
+import { createDemoDocsState, extractTags, normalizeTag } from "@xharbor/contracts";
 import { AuthorizationError, authorize, permissions } from "@xharbor/platform-auth";
 import { SqliteStateStore } from "@xharbor/sqlite-store";
 import { SessionStore, parseCookies, sessionCookieName } from "@xharbor/platform-session";
@@ -66,6 +66,30 @@ function docsPayload() {
   };
 }
 
+function buildDocsTagCatalog() {
+  return state.pages.flatMap((page) => {
+    const tags = extractTags(page.content);
+    if (!tags.length) return [];
+
+    return [{
+      source: "xdoc",
+      kind: "page",
+      id: page.id,
+      pageID: page.id,
+      title: page.title,
+      excerpt: page.content.split("\n").find((line) => line.trim() && !line.trim().startsWith("#")) || "Page content contains the requested tag.",
+      slug: page.slug,
+      tags,
+      matches: [
+        {
+          field: "content",
+          value: page.content
+        }
+      ]
+    }];
+  });
+}
+
 async function refreshWorkspace() {
   try {
     const workspaceResponse = await fetch(`${xgroupBaseURL}/api/workspace`);
@@ -96,6 +120,21 @@ const server = http.createServer(async (request, response) => {
     if (request.method === "GET" && url.pathname === "/api/docs") {
       authorize(state.snapshot.workspace, await resolveActingUserID(request), permissions.viewDocs);
       return json(response, 200, docsPayload());
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/tags/catalog") {
+      authorize(state.snapshot.workspace, await resolveActingUserID(request), permissions.viewTags);
+      return json(response, 200, { source: "xdoc", items: buildDocsTagCatalog() });
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/tags/search") {
+      authorize(state.snapshot.workspace, await resolveActingUserID(request), permissions.viewTags);
+      const tag = normalizeTag(url.searchParams.get("tag"));
+      if (!tag) {
+        return json(response, 200, { source: "xdoc", tag: "", items: [] });
+      }
+      const items = buildDocsTagCatalog().filter((item) => item.tags.includes(tag));
+      return json(response, 200, { source: "xdoc", tag, items });
     }
 
     if (request.method === "POST" && url.pathname === "/api/docs/refresh-workspace") {

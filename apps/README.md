@@ -12,6 +12,8 @@ This directory contains the application entry points for xHarbor.
 - `xdashboard-web`: reporting UI for `xDashboard`
 - `xtalk-api`: chat backend for rooms and direct conversations
 - `xtalk-web`: web client for `xTalk`
+- `xtag-api`: cross-system tag indexing and search backend
+- `xtag-web`: tag discovery UI for `xTag`
 - `xdoc-api`: documentation backend for Markdown pages and revisions
 - `xdoc-web`: documentation UI for `xDoc`
 

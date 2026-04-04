@@ -1,5 +1,5 @@
 import http from "node:http";
-import { createDemoBacklogState, createDemoWorkspace, slugify } from "@xharbor/contracts";
+import { createDemoBacklogState, createDemoWorkspace, extractTags, normalizeTag, slugify } from "@xharbor/contracts";
 import { AuthorizationError, authorize, permissions } from "@xharbor/platform-auth";
 import { SessionStore, parseCookies, sessionCookieName } from "@xharbor/platform-session";
 import { SqliteStateStore } from "@xharbor/sqlite-store";
@@ -118,6 +118,42 @@ function taskSummaryPayload() {
   };
 }
 
+function buildBacklogTagCatalog() {
+  return state.board.tasks.flatMap((task) => {
+    const project = findProject(task.projectID);
+    const comments = state.board.comments.filter((comment) => comment.taskID === task.id);
+    const fieldMatches = [
+      { field: "title", value: task.title },
+      { field: "description", value: task.description },
+      ...comments.map((comment) => ({ field: "comment", value: comment.body, commentID: comment.id, authorUserID: comment.authorUserID }))
+    ];
+
+    const tags = [...new Set(fieldMatches.flatMap((item) => extractTags(item.value)))];
+    if (!tags.length) return [];
+
+    return [{
+      source: "xbacklog",
+      kind: "task",
+      id: task.id,
+      title: task.title,
+      excerpt: task.description || comments[0]?.body || "Task content contains the requested tag.",
+      projectID: task.projectID,
+      projectName: project?.name || task.projectID,
+      teamID: project?.teamID || null,
+      taskID: task.id,
+      tags,
+      matches: fieldMatches
+        .filter((item) => extractTags(item.value).length)
+        .map((item) => ({
+          field: item.field,
+          value: item.value,
+          commentID: item.commentID || null,
+          authorUserID: item.authorUserID || null
+        }))
+    }];
+  });
+}
+
 const server = http.createServer(async (request, response) => {
   try {
     const url = new URL(request.url, `http://${request.headers.host}`);
@@ -133,6 +169,21 @@ const server = http.createServer(async (request, response) => {
         return text(response, 404, `Unknown task: ${taskID}`);
       }
       return json(response, 200, detail);
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/tags/catalog") {
+      authorize(state.board.workspace, await resolveActingUserID(request), permissions.viewTags);
+      return json(response, 200, { source: "xbacklog", items: buildBacklogTagCatalog() });
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/tags/search") {
+      authorize(state.board.workspace, await resolveActingUserID(request), permissions.viewTags);
+      const tag = normalizeTag(url.searchParams.get("tag"));
+      if (!tag) {
+        return json(response, 200, { source: "xbacklog", tag: "", items: [] });
+      }
+      const items = buildBacklogTagCatalog().filter((item) => item.tags.includes(tag));
+      return json(response, 200, { source: "xbacklog", tag, items });
     }
 
     if (request.method === "POST" && url.pathname === "/api/sync-workspace") {

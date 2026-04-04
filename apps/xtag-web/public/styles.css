@@ -1,0 +1,86 @@
+.tag-search-form {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.tag-search-input {
+  flex: 1 1 320px;
+  min-width: 0;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-1);
+}
+
+.tag-source-strip,
+.tag-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tag-source-pill,
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-1);
+}
+
+.tag-chip {
+  cursor: pointer;
+}
+
+.tag-chip.active {
+  border-color: rgba(255, 191, 156, 0.28);
+  background: linear-gradient(135deg, rgba(255, 191, 156, 0.92), rgba(196, 238, 219, 0.94));
+  color: rgba(52, 60, 58, 0.92);
+}
+
+.tag-chip.small {
+  padding: 5px 10px;
+  font-size: 0.8rem;
+}
+
+.tag-chip-list.compact {
+  margin-top: 10px;
+}
+
+.tag-result-group {
+  display: grid;
+  gap: 10px;
+}
+
+.tag-result-card {
+  gap: 10px;
+}
+
+.tag-result-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.tag-admin-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.tag-result-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.tag-open-link {
+  text-decoration: none;
+}

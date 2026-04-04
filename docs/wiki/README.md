@@ -13,6 +13,7 @@ This wiki is the fast path into the platform. It complements the product and arc
 - [xBacklog](modules/xbacklog.md)
 - [xDashboard](modules/xdashboard.md)
 - [xTalk](modules/xtalk.md)
+- [xTag](modules/xtag.md)
 - [xDoc](modules/xdoc.md)
 
 ## UI reference gallery

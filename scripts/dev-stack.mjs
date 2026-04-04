@@ -13,11 +13,13 @@ const stackServices = [
   { name: "xdashboard-api", command: ["node", "apps/xdashboard-api/src/server.js"], url: "http://127.0.0.1:8082" },
   { name: "xtalk-api", command: ["node", "apps/xtalk-api/src/server.js"], url: "http://127.0.0.1:8083" },
   { name: "xdoc-api", command: ["node", "apps/xdoc-api/src/server.js"], url: "http://127.0.0.1:8084" },
+  { name: "xtag-api", command: ["node", "apps/xtag-api/src/server.js"], url: "http://127.0.0.1:8085" },
   { name: "xgroup-web", command: ["node", "apps/xgroup-web/src/server.js"], url: "http://127.0.0.1:3000" },
   { name: "xbacklog-web", command: ["node", "apps/xbacklog-web/src/server.js"], url: "http://127.0.0.1:3001" },
   { name: "xdashboard-web", command: ["node", "apps/xdashboard-web/src/server.js"], url: "http://127.0.0.1:3002" },
   { name: "xtalk-web", command: ["node", "apps/xtalk-web/src/server.js"], url: "http://127.0.0.1:3003" },
-  { name: "xdoc-web", command: ["node", "apps/xdoc-web/src/server.js"], url: "http://127.0.0.1:3004" }
+  { name: "xdoc-web", command: ["node", "apps/xdoc-web/src/server.js"], url: "http://127.0.0.1:3004" },
+  { name: "xtag-web", command: ["node", "apps/xtag-web/src/server.js"], url: "http://127.0.0.1:3005" }
 ];
 
 const workspaceServices = [

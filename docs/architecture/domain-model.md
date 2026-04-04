@@ -70,9 +70,17 @@ An authenticated browser or client session with presence state.
 - Markdown content revision
 - authorship metadata
 
+### xTag
+
+- normalized tag
+- source tag match
+- aggregated tag index
+- cross-module search result
+
 ## Cross-app integration examples
 
 - When team structure changes in `xGroup`, `xBacklog`, `xTalk`, `xDashboard`, and `xDoc` can consume the updated organizational data.
 - When task activity changes in `xBacklog`, `xDashboard` can use that for delivery reporting.
 - When users authenticate or change presence, `xTalk` can reflect that state in communication flows.
 - When documentation changes in `xDoc`, revision metadata remains tied to users owned by `xGroup`.
+- When tagged content changes in `xBacklog`, `xTalk`, or `xDoc`, `xTag` can aggregate those results into one search layer.

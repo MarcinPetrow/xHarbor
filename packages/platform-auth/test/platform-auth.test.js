@@ -29,6 +29,15 @@ test("member can view and edit docs", () => {
   assert.equal(authorize(workspace, "user-ola", permissions.editDocs).id, "user-ola");
 });
 
+test("member can view tags but cannot manage tags", () => {
+  const workspace = createDemoWorkspace().snapshot;
+  assert.equal(authorize(workspace, "user-ola", permissions.viewTags).id, "user-ola");
+  assert.throws(
+    () => authorize(workspace, "user-ola", permissions.manageTags),
+    (error) => error instanceof AuthorizationError && error.statusCode === 403
+  );
+});
+
 test("suspended user cannot authorize", () => {
   const workspace = createDemoWorkspace().snapshot;
   workspace.users = workspace.users.map((user) => user.id === "user-ola" ? { ...user, status: "suspended" } : user);

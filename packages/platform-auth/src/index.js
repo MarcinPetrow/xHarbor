@@ -12,6 +12,8 @@ export const permissions = {
   viewDashboard: "viewDashboard",
   viewDocs: "viewDocs",
   editDocs: "editDocs",
+  viewTags: "viewTags",
+  manageTags: "manageTags",
   createProject: (teamID) => ({ type: "createProject", teamID }),
   createTask: (teamID) => ({ type: "createTask", teamID })
 };
@@ -43,6 +45,14 @@ export function authorize(snapshot, actingUserID, permission) {
 
   if (permission === permissions.viewDashboard) {
     return user;
+  }
+
+  if (permission === permissions.viewTags) {
+    return user;
+  }
+
+  if (permission === permissions.manageTags && !canManageBacklog) {
+    throw new AuthorizationError(403, "Forbidden for permission: manageTags");
   }
 
   if (permission === permissions.viewDocs || permission === permissions.editDocs) {

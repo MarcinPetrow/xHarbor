@@ -81,6 +81,19 @@ Responsibilities:
 Dependencies:
 - authenticated users and organizational metadata from `xGroup`
 
+### xTag
+
+Cross-system tag indexing and discovery module.
+
+Responsibilities:
+- normalize case-insensitive `#tags`
+- aggregate tagged entities across apps
+- provide unified tag search
+- keep tag usage coherent across sources
+
+Dependencies:
+- tagged entities exposed by platform modules such as `xBacklog`, `xTalk`, and `xDoc`
+
 ## Non-functional priorities
 
 - open source and self-hostable

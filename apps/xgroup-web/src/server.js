@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 
 const port = 3000;
 const apiBaseURL = new URL("http://127.0.0.1:8080");
+const tagBaseURL = new URL("http://127.0.0.1:8085");
 const publicRoot = fileURLToPath(new URL("../public/", import.meta.url));
 const sharedPublicRoot = fileURLToPath(new URL("../../_shared-web/public/", import.meta.url));
 const logoPath = fileURLToPath(new URL("../../../go_home.png", import.meta.url));
@@ -64,8 +65,8 @@ async function serveStatic(pathname, response) {
   return serveFromRoot(publicRoot, target, response);
 }
 
-async function proxyToAPI(request, response, pathname) {
-  const url = new URL(pathname, apiBaseURL);
+async function proxyToAPI(request, response, pathname, targetBaseURL = apiBaseURL) {
+  const url = new URL(pathname, targetBaseURL);
 
   const proxyRequest = http.request(
     url,
@@ -99,7 +100,10 @@ const server = http.createServer(async (request, response) => {
     const url = new URL(request.url, `http://${request.headers.host}`);
 
     if (url.pathname.startsWith("/api/")) {
-      return proxyToAPI(request, response, url.pathname);
+      if (url.pathname.startsWith("/api/tags")) {
+        return proxyToAPI(request, response, `${url.pathname}${url.search}`, tagBaseURL);
+      }
+      return proxyToAPI(request, response, `${url.pathname}${url.search}`);
     }
 
     return serveStatic(url.pathname, response);

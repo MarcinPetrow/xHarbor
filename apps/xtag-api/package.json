@@ -1,0 +1,11 @@
+{
+  "name": "@xharbor/xtag-api",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@xharbor/contracts": "*",
+    "@xharbor/platform-auth": "*",
+    "@xharbor/platform-session": "*",
+    "@xharbor/sqlite-store": "*"
+  }
+}

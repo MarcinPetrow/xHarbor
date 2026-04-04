@@ -4,10 +4,9 @@ import { access } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const port = 3004;
-const apiBaseURL = new URL("http://127.0.0.1:8084");
+const port = 3005;
+const apiBaseURL = new URL("http://127.0.0.1:8085");
 const sessionBaseURL = new URL("http://127.0.0.1:8080");
-const tagBaseURL = new URL("http://127.0.0.1:8085");
 const publicRoot = fileURLToPath(new URL("../public/", import.meta.url));
 const sharedPublicRoot = fileURLToPath(new URL("../../_shared-web/public/", import.meta.url));
 const logoPath = fileURLToPath(new URL("../../../go_home.png", import.meta.url));
@@ -32,7 +31,6 @@ function sendServerError(response, error) {
 
 async function serveFromRoot(rootPath, pathname, response) {
   const filePath = normalize(join(rootPath, pathname));
-
   if (!filePath.startsWith(rootPath)) {
     return sendNotFound(response);
   }
@@ -103,10 +101,6 @@ const server = http.createServer(async (request, response) => {
       return proxyToAPI(request, response, url.pathname, sessionBaseURL);
     }
 
-    if (url.pathname.startsWith("/api/tags")) {
-      return proxyToAPI(request, response, `${url.pathname}${url.search}`, tagBaseURL);
-    }
-
     if (url.pathname.startsWith("/api/")) {
       return proxyToAPI(request, response, `${url.pathname}${url.search}`);
     }
@@ -118,5 +112,5 @@ const server = http.createServer(async (request, response) => {
 });
 
 server.listen(port, "127.0.0.1", () => {
-  console.log(`xdoc-web listening on http://127.0.0.1:${port}`);
+  console.log(`xtag-web listening on http://127.0.0.1:${port}`);
 });

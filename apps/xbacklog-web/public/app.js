@@ -9,6 +9,29 @@ const boardFilters = {
   query: ""
 };
 
+function readBacklogLocation() {
+  const url = new URL(window.location.href);
+  return {
+    view: url.searchParams.get("view") || "",
+    taskID: url.searchParams.get("taskId") || ""
+  };
+}
+
+function syncBacklogLocation(view, taskID = "") {
+  const url = new URL(window.location.href);
+  if (view && view !== "board") {
+    url.searchParams.set("view", view);
+  } else {
+    url.searchParams.delete("view");
+  }
+  if (taskID) {
+    url.searchParams.set("taskId", taskID);
+  } else {
+    url.searchParams.delete("taskId");
+  }
+  window.history.replaceState({}, "", `${url.pathname}${url.search}`);
+}
+
 async function requestJSON(path, options = {}) {
   const response = await fetch(path, {
     credentials: "include",
@@ -80,7 +103,7 @@ function userRef(user, fallback = "Unknown user") {
 function taskCard(task, projectName, assignee, active) {
   return `
     <article class="task-card${active ? " active" : ""}" data-task-id="${task.id}" draggable="true">
-      <h4>${shellAPI.escapeHTML(task.title)}</h4>
+      <h4>${shellAPI.renderTagText(task.title)}</h4>
       <p>${shellAPI.escapeHTML(projectName)} · ${userRef(assignee, "Unassigned")}</p>
       <small>${shellAPI.escapeHTML(task.status)}</small>
     </article>
@@ -142,6 +165,11 @@ const shell = shellAPI.createShell({
   onLogin: createSession,
   onLogout: destroySession,
   renderView: async ({ setHeader, setMetrics, setPanels, renderEmpty, escapeHTML, formatDateTime, refresh, state }) => {
+    const locationState = readBacklogLocation();
+    if (["board", "projects", "comments"].includes(locationState.view) && locationState.view !== state.currentView) {
+      state.currentView = locationState.view;
+    }
+
     const payload = await fetchBacklog();
     const { workspace, projects, tasks, comments, syncStatus } = payload;
     const columns = [
@@ -249,9 +277,9 @@ const shell = shellAPI.createShell({
                 const task = tasks.find((item) => item.id === comment.taskID);
                 return rowItem(
                   `${author ? userRef(author) : escapeHTML(comment.authorUserID)} on ${escapeHTML(task?.title || comment.taskID)}`,
-                  comment.body,
+                  shellAPI.renderTagText(comment.body),
                   formatDateTime(comment.createdAt),
-                  { titleHTML: true }
+                  { titleHTML: true, subtitleHTML: true }
                 );
               }).join("")}</div>`
             : renderEmpty("No comments", "Discussion appears here once tasks are being updated.")
@@ -261,8 +289,12 @@ const shell = shellAPI.createShell({
     }
 
     const filteredTasks = filterTasks(tasks, projects);
+    if (locationState.taskID && filteredTasks.some((task) => task.id === locationState.taskID)) {
+      selectedTaskID = locationState.taskID;
+    }
     selectedTaskID = filteredTasks.some((task) => task.id === selectedTaskID) ? selectedTaskID : filteredTasks[0]?.id ?? null;
     const detail = selectedTaskID ? await fetchTaskDetail(selectedTaskID) : null;
+    syncBacklogLocation(state.currentView, selectedTaskID);
 
     setMetrics([
       { label: "New", value: filteredTasks.filter((task) => task.status === "new").length, meta: "Fresh work" },
@@ -367,9 +399,17 @@ const shell = shellAPI.createShell({
                 ${detail.comments.length
                   ? detail.comments.map((comment) => {
                       const author = workspace.users.find((user) => user.id === comment.authorUserID);
-                      return rowItem(author ? userRef(author) : escapeHTML(comment.authorUserID), comment.body, formatDateTime(comment.createdAt), { titleHTML: true });
+                      return rowItem(author ? userRef(author) : escapeHTML(comment.authorUserID), shellAPI.renderTagText(comment.body), formatDateTime(comment.createdAt), { titleHTML: true, subtitleHTML: true });
                     }).join("")
                   : renderEmpty("No comments", "Add the first task comment below.")}
+              </div>
+            </div>
+            <div class="detail-block">
+              <h4>Description</h4>
+              <div class="row-list">
+                ${detail.task.description
+                  ? rowItem("Task body", shellAPI.renderTagText(detail.task.description), "", { subtitleHTML: true })
+                  : renderEmpty("No description", "Add a description to capture context and tags.")}
               </div>
             </div>
             <form id="comment-form" class="compact-stack">
@@ -494,6 +534,9 @@ const shell = shellAPI.createShell({
       });
       await refresh();
     });
+
+    ["task-title", "task-description", "detail-title", "detail-description", "comment-body"]
+      .forEach((id) => shellAPI.attachTagAutocomplete(document.getElementById(id)));
   }
 });
 

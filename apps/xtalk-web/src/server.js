@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 const port = 3003;
 const apiBaseURL = new URL("http://127.0.0.1:8083");
 const sessionBaseURL = new URL("http://127.0.0.1:8080");
+const tagBaseURL = new URL("http://127.0.0.1:8085");
 const publicRoot = fileURLToPath(new URL("../public/", import.meta.url));
 const sharedPublicRoot = fileURLToPath(new URL("../../_shared-web/public/", import.meta.url));
 const logoPath = fileURLToPath(new URL("../../../go_home.png", import.meta.url));
@@ -103,8 +104,12 @@ const server = http.createServer(async (request, response) => {
       return proxyToAPI(request, response, url.pathname, sessionBaseURL);
     }
 
+    if (url.pathname.startsWith("/api/tags")) {
+      return proxyToAPI(request, response, `${url.pathname}${url.search}`, tagBaseURL);
+    }
+
     if (url.pathname.startsWith("/api/")) {
-      return proxyToAPI(request, response, url.pathname);
+      return proxyToAPI(request, response, `${url.pathname}${url.search}`);
     }
 
     return serveStatic(url.pathname, response);

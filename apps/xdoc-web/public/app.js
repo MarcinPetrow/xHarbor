@@ -5,6 +5,29 @@ let selectedPageID = "";
 let docMode = "preview";
 const expandedPageIDs = new Set();
 
+function readDocLocation() {
+  const url = new URL(window.location.href);
+  return {
+    pageID: url.searchParams.get("pageId") || "",
+    mode: url.searchParams.get("mode") || "preview"
+  };
+}
+
+function syncDocLocation(pageID, mode) {
+  const url = new URL(window.location.href);
+  if (pageID) {
+    url.searchParams.set("pageId", pageID);
+  } else {
+    url.searchParams.delete("pageId");
+  }
+  if (mode && mode !== "preview") {
+    url.searchParams.set("mode", mode);
+  } else {
+    url.searchParams.delete("mode");
+  }
+  window.history.replaceState({}, "", `${url.pathname}${url.search}`);
+}
+
 async function requestJSON(path, options = {}) {
   const response = await fetch(path, {
     credentials: "include",
@@ -139,7 +162,7 @@ function renderPageTree(nodes, depth = 0) {
 }
 
 function escapeInline(text) {
-  return shellAPI.escapeHTML(text)
+  return shellAPI.renderTagText(text)
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
     .replace(/\*(.+?)\*/g, "<em>$1</em>")
     .replace(/`([^`]+)`/g, "<code>$1</code>")
@@ -302,6 +325,14 @@ const shell = shellAPI.createShell({
     }
 
     const docs = await fetchDocs();
+    const locationState = readDocLocation();
+    if (locationState.pageID && docs.pages.some((page) => page.id === locationState.pageID)) {
+      selectedPageID = locationState.pageID;
+      ensureExpandedPath(selectedPageID);
+    }
+    if (["preview", "edit", "history"].includes(locationState.mode)) {
+      docMode = locationState.mode;
+    }
     const page = currentPage();
     const pageRevisions = page ? revisionsForPage(page.id) : [];
     const breadcrumb = page ? pagePath(page.id).join(" / ") : "";
@@ -369,6 +400,7 @@ const shell = shellAPI.createShell({
         await refresh();
       });
     }
+    syncDocLocation(selectedPageID, docMode);
     setMetrics([]);
     setHeader("", "", "", { hidden: true });
     setPanels([
@@ -499,6 +531,8 @@ const shell = shellAPI.createShell({
       docMode = "preview";
       await refresh();
     });
+
+    shellAPI.attachTagAutocomplete(document.getElementById("page-content"));
   }
 });
 
