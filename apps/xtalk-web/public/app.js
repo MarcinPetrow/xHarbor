@@ -14,6 +14,7 @@ let keepComposerFocusCycles = 0;
 let lastRenderedThreadKey = "";
 let lastRenderedMessageKey = "";
 let chatStickToBottom = true;
+let pendingReadThreadKey = "";
 
 function readThreadFromLocation() {
   const url = new URL(window.location.href);
@@ -84,6 +85,20 @@ async function destroySession() {
 
 async function refreshWorkspace() {
   return requestJSON("/api/chat/refresh-workspace", {
+    method: "POST",
+    body: JSON.stringify({})
+  });
+}
+
+async function markThreadRead(thread) {
+  if (!thread?.id) return null;
+  if (thread.kind === "room") {
+    return requestJSON(`/api/rooms/${thread.id}/read`, {
+      method: "POST",
+      body: JSON.stringify({})
+    });
+  }
+  return requestJSON(`/api/direct-conversations/${thread.id}/read`, {
     method: "POST",
     body: JSON.stringify({})
   });
@@ -492,6 +507,9 @@ shell = shellAPI.createShell({
           .map((membership) => payload.workspace.users.find((user) => user.id === membership.userID))
           .filter(Boolean)
       : payload.workspace.users.filter((user) => activeDirect?.participantUserIDs.includes(user.id));
+    const activeUnreadCount = selectedThread.kind === "room"
+      ? (payload.roomUnread?.[selectedThread.id] || 0)
+      : (payload.directUnread?.[selectedThread.id] || 0);
     const groupedMessages = groupMessages(activeMessages);
     const timelineItems = [];
     groupedMessages.forEach((group, index) => {
@@ -526,38 +544,40 @@ shell = shellAPI.createShell({
         html: `
           <div class="chat-layout chat-neon-surface">
             <aside class="chat-sidebar">
-              <div class="chat-mini-section">
-                <div class="chat-section-heading">
-                  <strong>Rooms</strong>
-                  <button id="open-room-composer" class="chat-icon-button" type="button" aria-label="Create room"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+              <div class="chat-sidebar-scroll">
+                <div class="chat-mini-section">
+                  <div class="chat-section-heading">
+                    <strong>Rooms</strong>
+                    <button id="open-room-composer" class="chat-icon-button" type="button" aria-label="Create room"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+                  </div>
+                  <form id="room-form" class="compact-stack chat-inline-form hidden">
+                    <input id="room-name" class="shell-input" placeholder="New room" required>
+                    <button class="shell-button-secondary" type="submit"${roomTeamID ? "" : " disabled"}>Create room</button>
+                  </form>
+                  <div id="room-thread-list" class="chat-thread-list">
+                    ${roomThreads.length
+                      ? roomThreads.map((thread) => threadItem(thread.title, thread.copy, thread.unread, selectedThread.kind === "room" && selectedThread.id === thread.id, "room", thread.id, "", "", thread.avatarEntity)).join("")
+                      : renderEmpty("No rooms", "Create the first team room.")}
+                  </div>
                 </div>
-                <form id="room-form" class="compact-stack chat-inline-form hidden">
-                  <input id="room-name" class="shell-input" placeholder="New room" required>
-                  <button class="shell-button-secondary" type="submit"${roomTeamID ? "" : " disabled"}>Create room</button>
-                </form>
-                <div id="room-thread-list" class="chat-thread-list">
-                  ${roomThreads.length
-                    ? roomThreads.map((thread) => threadItem(thread.title, thread.copy, thread.unread, selectedThread.kind === "room" && selectedThread.id === thread.id, "room", thread.id, "", "", thread.avatarEntity)).join("")
-                    : renderEmpty("No rooms", "Create the first team room.")}
-                </div>
-              </div>
-              <div class="chat-mini-section">
-                <div class="chat-section-heading">
-                  <strong>Direct Messages</strong>
-                  <button id="open-dm-composer" class="chat-icon-button" type="button" aria-label="Open direct message"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
-                </div>
-                <form id="dm-form" class="compact-stack chat-inline-form hidden">
-                  <select id="dm-user" class="shell-select">
-                    ${payload.workspace.users
-                      .filter((user) => user.id !== state.session.user.id && user.status === "active")
-                      .map((user) => `<option value="${escapeHTML(user.id)}">${escapeHTML(user.displayName)}</option>`).join("")}
-                  </select>
-                  <button class="shell-button-secondary" type="submit">Open DM</button>
-                </form>
-                <div id="direct-thread-list" class="chat-thread-list">
-                  ${directThreads.length
-                    ? directThreads.map((thread) => threadItem(thread.title, thread.copy, thread.unread, selectedThread.kind === "direct" && selectedThread.id === thread.id, "direct", thread.id, thread.presence, thread.userID, thread.avatarEntity)).join("")
-                    : renderEmpty("No direct conversations", "Start the first DM below.")}
+                <div class="chat-mini-section">
+                  <div class="chat-section-heading">
+                    <strong>Direct Messages</strong>
+                    <button id="open-dm-composer" class="chat-icon-button" type="button" aria-label="Open direct message"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+                  </div>
+                  <form id="dm-form" class="compact-stack chat-inline-form hidden">
+                    <select id="dm-user" class="shell-select">
+                      ${payload.workspace.users
+                        .filter((user) => user.id !== state.session.user.id && user.status === "active")
+                        .map((user) => `<option value="${escapeHTML(user.id)}">${escapeHTML(user.displayName)}</option>`).join("")}
+                    </select>
+                    <button class="shell-button-secondary" type="submit">Open DM</button>
+                  </form>
+                  <div id="direct-thread-list" class="chat-thread-list">
+                    ${directThreads.length
+                      ? directThreads.map((thread) => threadItem(thread.title, thread.copy, thread.unread, selectedThread.kind === "direct" && selectedThread.id === thread.id, "direct", thread.id, thread.presence, thread.userID, thread.avatarEntity)).join("")
+                      : renderEmpty("No direct conversations", "Start the first DM below.")}
+                  </div>
                 </div>
               </div>
             </aside>
@@ -731,6 +751,27 @@ shell = shellAPI.createShell({
     }
     lastRenderedThreadKey = currentThreadKey;
     lastRenderedMessageKey = latestMessageKey;
+
+    if (
+      currentThreadKey &&
+      activeUnreadCount > 0 &&
+      document.visibilityState === "visible" &&
+      pendingReadThreadKey !== currentThreadKey
+    ) {
+      const threadToMark = { ...selectedThread };
+      pendingReadThreadKey = currentThreadKey;
+      window.setTimeout(async () => {
+        try {
+          await markThreadRead(threadToMark);
+        } catch {
+          // Ignore transient read-sync failures. A later refresh can retry.
+        } finally {
+          if (pendingReadThreadKey === currentThreadKey) {
+            pendingReadThreadKey = "";
+          }
+        }
+      }, 120);
+    }
   }
 });
 
