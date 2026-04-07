@@ -195,7 +195,7 @@ function layoutHorizontalOrgTree(container) {
   svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
   svg.innerHTML = "";
 
-  const stroke = "rgba(255,255,255,0.08)";
+  const stroke = "rgba(15,23,42,0.12)";
   const strokeWidth = "1";
   const busOffset = 16;
 
