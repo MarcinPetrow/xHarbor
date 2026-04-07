@@ -1,4 +1,5 @@
 const shellAPI = window.XHarborShell;
+const requestJSON = shellAPI.requestJSON;
 
 let docsCache = null;
 let selectedPageID = "";
@@ -6,64 +7,27 @@ let docMode = "preview";
 const expandedPageIDs = new Set();
 
 function readDocLocation() {
-  const url = new URL(window.location.href);
+  const location = shellAPI.readLocationState({
+    pageId: "",
+    mode: "preview"
+  });
   return {
-    pageID: url.searchParams.get("pageId") || "",
-    mode: url.searchParams.get("mode") || "preview"
+    pageID: location.pageId,
+    mode: location.mode
   };
 }
 
 function syncDocLocation(pageID, mode) {
-  const url = new URL(window.location.href);
-  if (pageID) {
-    url.searchParams.set("pageId", pageID);
-  } else {
-    url.searchParams.delete("pageId");
-  }
-  if (mode && mode !== "preview") {
-    url.searchParams.set("mode", mode);
-  } else {
-    url.searchParams.delete("mode");
-  }
-  window.history.replaceState({}, "", `${url.pathname}${url.search}`);
+  shellAPI.syncLocationState(
+    { pageId: pageID, mode },
+    { pageId: "", mode: "preview" }
+  );
 }
 
-async function requestJSON(path, options = {}) {
-  const response = await fetch(path, {
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {})
-    },
-    ...options
-  });
-
-  if (!response.ok) {
-    throw new Error(await response.text());
-  }
-
-  if (response.status === 204) return null;
-  return response.json();
-}
-
-async function loadSession() {
-  return requestJSON("/api/session");
-}
-
-async function loadUsers() {
-  return requestJSON("/api/users");
-}
-
-async function createSession(userID) {
-  return requestJSON("/api/session", {
-    method: "POST",
-    body: JSON.stringify({ userID })
-  });
-}
-
-async function destroySession() {
-  return requestJSON("/api/session", { method: "DELETE" });
-}
+const loadSession = shellAPI.loadSession;
+const loadUsers = shellAPI.loadUsers;
+const createSession = shellAPI.createSession;
+const destroySession = shellAPI.destroySession;
 
 async function fetchDocs() {
   docsCache = await requestJSON("/api/docs");

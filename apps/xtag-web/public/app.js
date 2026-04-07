@@ -1,41 +1,5 @@
 const shellAPI = window.XHarborShell;
-
-async function requestJSON(path, options = {}) {
-  const response = await fetch(path, {
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {})
-    },
-    ...options
-  });
-
-  if (!response.ok) {
-    throw new Error(await response.text());
-  }
-
-  if (response.status === 204) return null;
-  return response.json();
-}
-
-async function loadSession() {
-  return requestJSON("/api/session");
-}
-
-async function loadUsers() {
-  return requestJSON("/api/users");
-}
-
-async function createSession(userID) {
-  return requestJSON("/api/session", {
-    method: "POST",
-    body: JSON.stringify({ userID })
-  });
-}
-
-async function destroySession() {
-  return requestJSON("/api/session", { method: "DELETE" });
-}
+const requestJSON = shellAPI.requestJSON;
 
 async function fetchTags(query = "") {
   const search = query ? `?query=${encodeURIComponent(query)}` : "";
@@ -124,18 +88,15 @@ function similarTagSuggestions(tags = [], aliases = []) {
 }
 
 function readQueryFromLocation() {
-  const url = new URL(window.location.href);
-  return shellAPI.normalizeTag(url.searchParams.get("query") || "");
+  const location = shellAPI.readLocationState({ query: "" });
+  return shellAPI.normalizeTag(location.query);
 }
 
 function syncLocationQuery(query) {
-  const url = new URL(window.location.href);
-  if (query) {
-    url.searchParams.set("query", shellAPI.normalizeTag(query));
-  } else {
-    url.searchParams.delete("query");
-  }
-  window.history.replaceState({}, "", `${url.pathname}${url.search}`);
+  shellAPI.syncLocationState(
+    { query: shellAPI.normalizeTag(query) },
+    { query: "" }
+  );
 }
 
 let currentQuery = readQueryFromLocation();
@@ -159,10 +120,10 @@ const shell = shellAPI.createShell({
       ]
     }
   ],
-  loadUsers,
-  loadSession,
-  onLogin: createSession,
-  onLogout: destroySession,
+  loadUsers: shellAPI.loadUsers,
+  loadSession: shellAPI.loadSession,
+  onLogin: shellAPI.createSession,
+  onLogout: shellAPI.destroySession,
   renderView: async ({ state, setHeader, setMetrics, setPanels, renderEmpty, escapeHTML, formatDateTime, refresh }) => {
     if (!state.session.authenticated) {
       setHeader("Tag Search Access", "Tag search is available after authentication through the shared top-right login control.", "Signed out");

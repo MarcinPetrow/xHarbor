@@ -1,22 +1,8 @@
 const shellAPI = window.XHarborShell;
-
-async function requestJSON(path, options = {}) {
-  const response = await fetch(path, {
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {})
-    },
-    ...options
-  });
-
-  if (!response.ok) {
-    throw new Error(await response.text());
-  }
-
-  if (response.status === 204) return null;
-  return response.json();
-}
+const requestJSON = shellAPI.requestJSON;
+const actionButton = shellAPI.actionButton;
+const sectionToolbar = shellAPI.sectionToolbar;
+const rowItem = shellAPI.rowItem;
 
 function membershipKey(membership) {
   return `${membership.userID}::${membership.teamID}`;
@@ -57,8 +43,7 @@ function managerOptions(users, selectedValue = "") {
 }
 
 function userRef(user, fallback = "Unknown user") {
-  if (!user) return shellAPI.escapeHTML(fallback);
-  return `<span class="user-ref-inline" data-user-id="${shellAPI.escapeHTML(user.id)}">${renderUserAvatar(user)}<span>${shellAPI.escapeHTML(user.displayName)}</span></span>`;
+  return shellAPI.renderUserRef(user, fallback);
 }
 
 function userFullName(user) {
@@ -255,19 +240,6 @@ function highlightHorizontalOrgTree(container, selectedIDs) {
   });
 }
 
-function rowItem(title, subtitle, meta = "", actions = "") {
-  return `
-    <article class="row-item${actions ? "" : " two-col"}">
-      <div class="row-main">
-        <span class="row-title">${shellAPI.escapeHTML(title)}</span>
-        <span class="row-subtitle">${shellAPI.escapeHTML(subtitle)}</span>
-      </div>
-      ${meta ? `<div class="row-meta">${shellAPI.escapeHTML(meta)}</div>` : ""}
-      ${actions ? `<div class="row-actions">${actions}</div>` : ""}
-    </article>
-  `;
-}
-
 function denseTable(headers, rows) {
   return `
     <div class="dense-table">
@@ -300,23 +272,8 @@ function resetDirectoryRoute(state, view) {
   ensureDirectoryRoutes(state)[view] = { mode: "list" };
 }
 
-function sectionToolbar(title, actions) {
-  return `
-    <div class="section-toolbar">
-      <div class="section-toolbar-copy">
-        <strong>${shellAPI.escapeHTML(title)}</strong>
-      </div>
-      <div class="inline-actions">${actions.join("")}</div>
-    </div>
-  `;
-}
-
 async function loadWorkspace() {
   return requestJSON("/api/workspace", { headers: {} });
-}
-
-async function loadSession() {
-  return requestJSON("/api/session", { headers: {} });
 }
 
 async function loadUsers() {
@@ -334,19 +291,6 @@ async function loadInvitations() {
 
 async function loadAdminSessions() {
   return requestJSON("/api/admin/sessions", { headers: {} });
-}
-
-async function createSession(userID) {
-  return requestJSON("/api/session", {
-    method: "POST",
-    body: JSON.stringify({ userID })
-  });
-}
-
-async function destroySession() {
-  return requestJSON("/api/session", {
-    method: "DELETE"
-  });
 }
 
 const shell = shellAPI.createShell({
@@ -375,9 +319,9 @@ const shell = shellAPI.createShell({
     }
   ],
   loadUsers,
-  loadSession,
-  onLogin: createSession,
-  onLogout: destroySession,
+  loadSession: shellAPI.loadSession,
+  onLogin: shellAPI.createSession,
+  onLogout: shellAPI.destroySession,
   renderView: async ({ state, setHeader, setMetrics, setPanels, renderEmpty, dataCard, actionButton, escapeHTML, formatDateTime, refresh }) => {
     const [workspace, invitations, presence, adminSessions] = await Promise.all([
       loadWorkspace(),

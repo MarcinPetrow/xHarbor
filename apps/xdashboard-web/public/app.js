@@ -1,44 +1,9 @@
 const shellAPI = window.XHarborShell;
-
-async function requestJSON(path, options = {}) {
-  const response = await fetch(path, {
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {})
-    },
-    ...options
-  });
-
-  if (!response.ok) {
-    throw new Error(await response.text());
-  }
-
-  if (response.status === 204) return null;
-  return response.json();
-}
+const requestJSON = shellAPI.requestJSON;
+const rowItem = shellAPI.rowItem;
 
 async function fetchDashboard() {
   return requestJSON("/api/dashboard", { headers: {} });
-}
-
-async function loadSession() {
-  return requestJSON("/api/session", { headers: {} });
-}
-
-async function loadUsers() {
-  return requestJSON("/api/users", { headers: {} });
-}
-
-async function createSession(userID) {
-  return requestJSON("/api/session", {
-    method: "POST",
-    body: JSON.stringify({ userID })
-  });
-}
-
-async function destroySession() {
-  return requestJSON("/api/session", { method: "DELETE" });
 }
 
 async function refreshSources() {
@@ -46,18 +11,6 @@ async function refreshSources() {
     method: "POST",
     body: JSON.stringify({})
   });
-}
-
-function rowItem(title, subtitle, meta = "") {
-  return `
-    <article class="row-item two-col">
-      <div class="row-main">
-        <span class="row-title">${shellAPI.escapeHTML(title)}</span>
-        <span class="row-subtitle">${shellAPI.escapeHTML(subtitle)}</span>
-      </div>
-      <div class="row-meta">${shellAPI.escapeHTML(meta)}</div>
-    </article>
-  `;
 }
 
 function userRef(user, fallback = "Unknown user") {
@@ -101,10 +54,10 @@ const shell = shellAPI.createShell({
       ]
     }
   ],
-  loadUsers,
-  loadSession,
-  onLogin: createSession,
-  onLogout: destroySession,
+  loadUsers: shellAPI.loadUsers,
+  loadSession: shellAPI.loadSession,
+  onLogin: shellAPI.createSession,
+  onLogout: shellAPI.destroySession,
   renderView: async ({ state, setHeader, setMetrics, setPanels, renderEmpty, dataCard, escapeHTML, formatDateTime, refresh }) => {
     if (!state.session.authenticated) {
       setHeader("Dashboard Access", "Reporting is available after authentication through the shared top-right login control.", "Signed out");

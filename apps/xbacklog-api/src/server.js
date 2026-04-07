@@ -92,6 +92,12 @@ function findProject(projectID) {
   return state.board.projects.find((item) => item.id === projectID) ?? null;
 }
 
+function deleteTask(taskID) {
+  state.board.tasks = state.board.tasks.filter((item) => item.id !== taskID);
+  state.board.comments = state.board.comments.filter((item) => item.taskID !== taskID);
+  state.board.taskEvents = state.board.taskEvents.filter((item) => item.taskID !== taskID);
+}
+
 function buildTaskDetail(taskID) {
   const task = findTask(taskID);
   if (!task) return null;
@@ -262,6 +268,22 @@ const server = http.createServer(async (request, response) => {
       return json(response, 200, project);
     }
 
+    if (request.method === "DELETE" && url.pathname.match(/^\/api\/projects\/[^/]+$/)) {
+      await syncWorkspace();
+      const projectID = url.pathname.split("/")[3];
+      const project = findProject(projectID);
+      if (!project) {
+        return text(response, 404, `Unknown project: ${projectID}`);
+      }
+      const actingUserID = await resolveActingUserID(request);
+      authorize(state.board.workspace, actingUserID, permissions.createProject(project.teamID));
+      const taskIDs = state.board.tasks.filter((item) => item.projectID === projectID).map((item) => item.id);
+      taskIDs.forEach(deleteTask);
+      state.board.projects = state.board.projects.filter((item) => item.id !== projectID);
+      await persist();
+      return response.writeHead(204).end();
+    }
+
     if (request.method === "PATCH" && url.pathname.match(/^\/api\/tasks\/[^/]+$/)) {
       await syncWorkspace();
       const taskID = url.pathname.split("/")[3];
@@ -306,6 +328,21 @@ const server = http.createServer(async (request, response) => {
 
       await persist();
       return json(response, 200, task);
+    }
+
+    if (request.method === "DELETE" && url.pathname.match(/^\/api\/tasks\/[^/]+$/)) {
+      await syncWorkspace();
+      const taskID = url.pathname.split("/")[3];
+      const task = findTask(taskID);
+      if (!task) {
+        return text(response, 404, `Unknown task: ${taskID}`);
+      }
+      const project = findProject(task.projectID);
+      const actingUserID = await resolveActingUserID(request);
+      authorize(state.board.workspace, actingUserID, permissions.createTask(project.teamID));
+      deleteTask(taskID);
+      await persist();
+      return response.writeHead(204).end();
     }
 
     if (request.method === "POST" && url.pathname.match(/^\/api\/tasks\/[^/]+\/status$/)) {

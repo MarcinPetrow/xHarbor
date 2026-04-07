@@ -39,6 +39,29 @@
     return `http://127.0.0.1:3005/?query=${encodeURIComponent(normalized)}`;
   }
 
+  function readLocationState(defaults = {}) {
+    const url = new URL(window.location.href);
+    return Object.fromEntries(
+      Object.entries(defaults).map(([key, defaultValue]) => [
+        key,
+        url.searchParams.get(key) ?? defaultValue
+      ])
+    );
+  }
+
+  function syncLocationState(values = {}, defaults = {}) {
+    const url = new URL(window.location.href);
+    Object.entries(values).forEach(([key, value]) => {
+      const defaultValue = defaults[key];
+      if (value === undefined || value === null || value === "" || value === defaultValue) {
+        url.searchParams.delete(key);
+      } else {
+        url.searchParams.set(key, value);
+      }
+    });
+    window.history.replaceState({}, "", `${url.pathname}${url.search}`);
+  }
+
   function renderTagText(value) {
     const input = String(value ?? "");
     let cursor = 0;
@@ -112,6 +135,43 @@
     const userAttribute = entity?.id ? ` data-user-id="${escapeHTML(entity.id)}"` : "";
     const label = entity?.displayName || avatarLabel(entity);
     return `<span class="${escapeHTML(className)}"${userAttribute}>${renderAvatar(entity, avatarClassName)}<span>${escapeHTML(label)}</span></span>`;
+  }
+
+  async function requestJSON(path, options = {}) {
+    const response = await fetch(path, {
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        ...(options.headers || {})
+      },
+      ...options
+    });
+
+    if (!response.ok) {
+      throw new Error(await response.text());
+    }
+
+    if (response.status === 204) return null;
+    return response.json();
+  }
+
+  async function loadSession() {
+    return requestJSON("/api/session");
+  }
+
+  async function loadUsers() {
+    return requestJSON("/api/users");
+  }
+
+  async function createSession(userID) {
+    return requestJSON("/api/session", {
+      method: "POST",
+      body: JSON.stringify({ userID })
+    });
+  }
+
+  async function destroySession() {
+    return requestJSON("/api/session", { method: "DELETE" });
   }
 
   function ensureFontAwesome() {
@@ -380,6 +440,30 @@
   function actionButton(label, type = "secondary", attributes = "") {
     const className = type === "danger" ? "shell-button-danger" : type === "primary" ? "shell-button" : "shell-button-secondary";
     return `<button class="${className}" type="button" ${attributes}>${escapeHTML(label)}</button>`;
+  }
+
+  function sectionToolbar(title, actions = []) {
+    return `
+      <div class="section-toolbar">
+        <div class="section-toolbar-copy">
+          <strong>${escapeHTML(title)}</strong>
+        </div>
+        <div class="inline-actions">${actions.join("")}</div>
+      </div>
+    `;
+  }
+
+  function rowItem(title, subtitle, meta = "", options = {}) {
+    return `
+      <article class="row-item${options.actions ? "" : " two-col"}">
+        <div class="row-main">
+          <span class="row-title">${options.titleHTML ? title : escapeHTML(title)}</span>
+          <span class="row-subtitle">${options.subtitleHTML ? subtitle : escapeHTML(subtitle)}</span>
+        </div>
+        ${meta ? `<div class="row-meta">${options.metaHTML ? meta : escapeHTML(meta)}</div>` : ""}
+        ${options.actions ? `<div class="row-actions">${options.actions}</div>` : ""}
+      </article>
+    `;
   }
 
   function renderUserHoverCard(user, allUsers) {
@@ -852,16 +936,25 @@
     timezones,
     escapeHTML,
     normalizeTag,
+    readLocationState,
+    syncLocationState,
     buildTagSearchURL,
     renderTagText,
     renderAvatar,
     renderUserRef,
+    requestJSON,
+    loadSession,
+    loadUsers,
+    createSession,
+    destroySession,
     avatarInitials,
     attachTagAutocomplete,
     createShell,
     formatDateTime,
     renderEmpty,
     dataCard,
-    actionButton
+    actionButton,
+    sectionToolbar,
+    rowItem
   };
 })();

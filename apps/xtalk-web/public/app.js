@@ -1,4 +1,5 @@
 const shellAPI = window.XHarborShell;
+const requestJSON = shellAPI.requestJSON;
 
 let chatStream;
 let selectedThread = { kind: "room", id: null };
@@ -17,9 +18,12 @@ let chatStickToBottom = true;
 let pendingReadThreadKey = "";
 
 function readThreadFromLocation() {
-  const url = new URL(window.location.href);
-  const kind = url.searchParams.get("threadKind");
-  const id = url.searchParams.get("threadId");
+  const location = shellAPI.readLocationState({
+    threadKind: "",
+    threadId: ""
+  });
+  const kind = location.threadKind;
+  const id = location.threadId;
   if (!id || (kind !== "room" && kind !== "direct")) {
     return null;
   }
@@ -27,42 +31,17 @@ function readThreadFromLocation() {
 }
 
 function syncThreadLocation(thread) {
-  const url = new URL(window.location.href);
-  if (thread?.id) {
-    url.searchParams.set("threadKind", thread.kind);
-    url.searchParams.set("threadId", thread.id);
-  } else {
-    url.searchParams.delete("threadKind");
-    url.searchParams.delete("threadId");
-  }
-  window.history.replaceState({}, "", `${url.pathname}${url.search}`);
-}
-
-async function requestJSON(path, options = {}) {
-  const response = await fetch(path, {
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {})
+  shellAPI.syncLocationState(
+    {
+      threadKind: thread?.id ? thread.kind : "",
+      threadId: thread?.id ? thread.id : ""
     },
-    ...options
-  });
-
-  if (!response.ok) {
-    throw new Error(await response.text());
-  }
-
-  if (response.status === 204) return null;
-  return response.json();
+    { threadKind: "", threadId: "" }
+  );
 }
 
-async function loadUsers() {
-  return requestJSON("/api/users", { headers: {} });
-}
-
-async function loadSession() {
-  return requestJSON("/api/session", { headers: {} });
-}
+const loadUsers = shellAPI.loadUsers;
+const loadSession = shellAPI.loadSession;
 
 async function loadChat() {
   return requestJSON("/api/chat", { headers: {} });
@@ -72,16 +51,8 @@ async function loadPresence() {
   return requestJSON("/api/presence", { headers: {} });
 }
 
-async function createSession(userID) {
-  return requestJSON("/api/session", {
-    method: "POST",
-    body: JSON.stringify({ userID })
-  });
-}
-
-async function destroySession() {
-  return requestJSON("/api/session", { method: "DELETE" });
-}
+const createSession = shellAPI.createSession;
+const destroySession = shellAPI.destroySession;
 
 async function refreshWorkspace() {
   return requestJSON("/api/chat/refresh-workspace", {

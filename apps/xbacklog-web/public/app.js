@@ -1,4 +1,8 @@
 const shellAPI = window.XHarborShell;
+const requestJSON = shellAPI.requestJSON;
+const actionButton = shellAPI.actionButton;
+const sectionToolbar = shellAPI.sectionToolbar;
+const rowItem = shellAPI.rowItem;
 
 let selectedTaskID = null;
 let draggedTaskID = null;
@@ -10,50 +14,23 @@ const boardFilters = {
 };
 
 function readBacklogLocation() {
-  const url = new URL(window.location.href);
+  const location = shellAPI.readLocationState({
+    view: "",
+    taskId: "",
+    projectId: ""
+  });
   return {
-    view: url.searchParams.get("view") || "",
-    taskID: url.searchParams.get("taskId") || "",
-    projectID: url.searchParams.get("projectId") || ""
+    view: location.view,
+    taskID: location.taskId,
+    projectID: location.projectId
   };
 }
 
 function syncBacklogLocation(view, taskID = "", projectID = "") {
-  const url = new URL(window.location.href);
-  if (view && view !== "board") {
-    url.searchParams.set("view", view);
-  } else {
-    url.searchParams.delete("view");
-  }
-  if (taskID) {
-    url.searchParams.set("taskId", taskID);
-  } else {
-    url.searchParams.delete("taskId");
-  }
-  if (projectID) {
-    url.searchParams.set("projectId", projectID);
-  } else {
-    url.searchParams.delete("projectId");
-  }
-  window.history.replaceState({}, "", `${url.pathname}${url.search}`);
-}
-
-async function requestJSON(path, options = {}) {
-  const response = await fetch(path, {
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {})
-    },
-    ...options
-  });
-
-  if (!response.ok) {
-    throw new Error(await response.text());
-  }
-
-  if (response.status === 204) return null;
-  return response.json();
+  shellAPI.syncLocationState(
+    { view, taskId: taskID, projectId: projectID },
+    { view: "board", taskId: "", projectId: "" }
+  );
 }
 
 async function fetchBacklog() {
@@ -64,41 +41,8 @@ async function fetchTaskDetail(taskID) {
   return requestJSON(`/api/tasks/${taskID}`, { headers: {} });
 }
 
-async function loadSession() {
-  return requestJSON("/api/session", { headers: {} });
-}
-
-async function loadUsers() {
-  return requestJSON("/api/users", { headers: {} });
-}
-
-async function createSession(userID) {
-  return requestJSON("/api/session", {
-    method: "POST",
-    body: JSON.stringify({ userID })
-  });
-}
-
-async function destroySession() {
-  return requestJSON("/api/session", {
-    method: "DELETE"
-  });
-}
-
 async function syncWorkspace() {
   return requestJSON("/api/sync-workspace", { method: "POST", body: JSON.stringify({}) });
-}
-
-function rowItem(title, subtitle, meta = "", options = {}) {
-  return `
-    <article class="row-item two-col">
-      <div class="row-main">
-        <span class="row-title">${options.titleHTML ? title : shellAPI.escapeHTML(title)}</span>
-        <span class="row-subtitle">${options.subtitleHTML ? subtitle : shellAPI.escapeHTML(subtitle)}</span>
-      </div>
-      <div class="row-meta">${options.metaHTML ? meta : shellAPI.escapeHTML(meta)}</div>
-    </article>
-  `;
 }
 
 function userRef(user, fallback = "Unknown user") {
@@ -122,19 +66,6 @@ function statusLabel(status) {
   return status;
 }
 
-function actionButton(label, tone, attrs) {
-  const className = tone === "primary" ? "shell-button" : "shell-button-secondary";
-  return `<button class="${className}" type="button" ${attrs}>${shellAPI.escapeHTML(label)}</button>`;
-}
-
-function sectionToolbar(title, actions = []) {
-  return `
-    <div class="section-toolbar">
-      <strong>${shellAPI.escapeHTML(title)}</strong>
-      <div class="inline-actions">${actions.join("")}</div>
-    </div>
-  `;
-}
 
 function filterTasks(tasks, projects) {
   return tasks.filter((task) => {
@@ -179,10 +110,10 @@ const shell = shellAPI.createShell({
       ]
     }
   ],
-  loadUsers,
-  loadSession,
-  onLogin: createSession,
-  onLogout: destroySession,
+  loadUsers: shellAPI.loadUsers,
+  loadSession: shellAPI.loadSession,
+  onLogin: shellAPI.createSession,
+  onLogout: shellAPI.destroySession,
   renderView: async ({ setHeader, setMetrics, setPanels, renderEmpty, escapeHTML, formatDateTime, refresh, state }) => {
     const locationState = readBacklogLocation();
     if (["board", "projects", "comments", "task-create", "task-edit", "project-create", "project-edit"].includes(locationState.view) && locationState.view !== state.currentView) {
