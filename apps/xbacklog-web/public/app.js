@@ -3,6 +3,9 @@ const requestJSON = shellAPI.requestJSON;
 const actionButton = shellAPI.actionButton;
 const sectionToolbar = shellAPI.sectionToolbar;
 const rowItem = shellAPI.rowItem;
+const crudListPanel = shellAPI.crudListPanel;
+const crudFormPanel = shellAPI.crudFormPanel;
+const crudSidePanel = shellAPI.crudSidePanel;
 
 let selectedTaskID = null;
 let draggedTaskID = null;
@@ -12,26 +15,19 @@ const boardFilters = {
   assigneeUserID: "all",
   query: ""
 };
-
-function readBacklogLocation() {
-  const location = shellAPI.readLocationState({
-    view: "",
-    taskId: "",
-    projectId: ""
-  });
-  return {
+const backlogRouter = shellAPI.createQueryRouter({
+  defaults: { view: "board", taskId: "", projectId: "" },
+  read: (location) => ({
     view: location.view,
     taskID: location.taskId,
     projectID: location.projectId
-  };
-}
-
-function syncBacklogLocation(view, taskID = "", projectID = "") {
-  shellAPI.syncLocationState(
-    { view, taskId: taskID, projectId: projectID },
-    { view: "board", taskId: "", projectId: "" }
-  );
-}
+  }),
+  write: ({ view = "board", taskID = "", projectID = "" }) => ({
+    view,
+    taskId: taskID,
+    projectId: projectID
+  })
+});
 
 async function fetchBacklog() {
   return requestJSON("/api/backlog", { headers: {} });
@@ -115,7 +111,7 @@ const shell = shellAPI.createShell({
   onLogin: shellAPI.createSession,
   onLogout: shellAPI.destroySession,
   renderView: async ({ setHeader, setMetrics, setPanels, renderEmpty, escapeHTML, formatDateTime, refresh, state }) => {
-    const locationState = readBacklogLocation();
+    const locationState = backlogRouter.read();
     if (["board", "projects", "comments", "task-create", "task-edit", "project-create", "project-edit"].includes(locationState.view) && locationState.view !== state.currentView) {
       state.currentView = locationState.view;
     }
@@ -140,11 +136,14 @@ const shell = shellAPI.createShell({
       setMetrics([]);
       setHeader("Create Project", "Create a project from a dedicated screen instead of mixing forms into the catalog.", `${projects.length} projects`);
       setPanels([
-        {
+        crudFormPanel({
           span: "span-8",
           title: "Create Project",
           copy: "Attach a new project to its owning team.",
-          html: `
+          toolbarTitle: "Project details",
+          backAction: 'data-action="open-projects"',
+          backLabel: "Back to projects",
+          content: `
             <form id="project-form" class="compact-stack">
               <input id="project-name" class="shell-input" placeholder="Project name" required>
               <select id="project-team" class="shell-select">
@@ -153,22 +152,22 @@ const shell = shellAPI.createShell({
               <button class="shell-button" type="submit">Create project</button>
             </form>
           `
-        },
-        {
+        }),
+        crudSidePanel({
           span: "span-4",
           title: "Project Catalog",
           copy: "Return to the catalog to edit or delete projects.",
-          html: `
-            ${sectionToolbar("Projects", [actionButton("Back to projects", "secondary", 'data-action="open-projects"')])}
-            ${projects.length
-              ? `<div class="row-list">${projects.slice(0, 8).map((project) => {
-                  const team = workspace.teams.find((item) => item.id === project.teamID);
-                  const projectTasks = tasks.filter((task) => task.projectID === project.id).length;
-                  return rowItem(project.name, team?.name || project.teamID, `${projectTasks} tasks`);
-                }).join("")}</div>`
-              : renderEmpty("No projects", "Create the first project to begin planning.")}
-          `
-        }
+          toolbarTitle: "Projects",
+          backAction: 'data-action="open-projects"',
+          backLabel: "Back to projects",
+          content: projects.length
+            ? `<div class="row-list">${projects.slice(0, 8).map((project) => {
+                const team = workspace.teams.find((item) => item.id === project.teamID);
+                const projectTasks = tasks.filter((task) => task.projectID === project.id).length;
+                return rowItem(project.name, team?.name || project.teamID, `${projectTasks} tasks`);
+              }).join("")}</div>`
+            : renderEmpty("No projects", "Create the first project to begin planning.")
+        })
       ]);
 
       document.getElementById("project-form")?.addEventListener("submit", async (event) => {
@@ -185,10 +184,10 @@ const shell = shellAPI.createShell({
       });
       document.querySelector('[data-action="open-projects"]')?.addEventListener("click", async () => {
         state.currentView = "projects";
-        syncBacklogLocation("projects");
+        backlogRouter.sync({ view: "projects" });
         await refresh();
       });
-      syncBacklogLocation("project-create");
+      backlogRouter.sync({ view: "project-create" });
       return;
     }
 
@@ -197,11 +196,14 @@ const shell = shellAPI.createShell({
       setMetrics([]);
       setHeader("Edit Project", "Update one project at a time from a dedicated edit screen.", selectedProject ? selectedProject.name : "Unknown project");
       setPanels([
-        {
+        crudFormPanel({
           span: "span-8",
           title: "Edit Project",
           copy: "Rename the project or move it to another team.",
-          html: selectedProject ? `
+          toolbarTitle: selectedProject?.name || "Project details",
+          backAction: 'data-action="open-projects"',
+          backLabel: "Back to projects",
+          content: selectedProject ? `
             <form id="project-edit-form" class="compact-stack">
               <input id="project-edit-name" class="shell-input" value="${escapeHTML(selectedProject.name)}" required>
               <select id="project-edit-team" class="shell-select">
@@ -213,13 +215,15 @@ const shell = shellAPI.createShell({
               </div>
             </form>
           ` : renderEmpty("Unknown project", "Return to the project catalog and pick another project.")
-        },
-        {
+        }),
+        crudSidePanel({
           span: "span-4",
           title: "Project Catalog",
           copy: "Return to the catalog when you're done editing.",
-          html: `${sectionToolbar("Projects", [actionButton("Back to projects", "secondary", 'data-action="open-projects"')])}`
-        }
+          toolbarTitle: "Projects",
+          backAction: 'data-action="open-projects"',
+          backLabel: "Back to projects"
+        })
       ]);
       document.getElementById("project-edit-form")?.addEventListener("submit", async (event) => {
         event.preventDefault();
@@ -231,22 +235,22 @@ const shell = shellAPI.createShell({
           })
         });
         state.currentView = "projects";
-        syncBacklogLocation("projects");
+        backlogRouter.sync({ view: "projects" });
         await refresh();
       });
       document.getElementById("delete-project")?.addEventListener("click", async () => {
         if (!window.confirm("Delete this project and all related tasks?")) return;
         await requestJSON(`/api/projects/${selectedProjectID}`, { method: "DELETE" });
         state.currentView = "projects";
-        syncBacklogLocation("projects");
+        backlogRouter.sync({ view: "projects" });
         await refresh();
       });
       document.querySelector('[data-action="open-projects"]')?.addEventListener("click", async () => {
         state.currentView = "projects";
-        syncBacklogLocation("projects");
+        backlogRouter.sync({ view: "projects" });
         await refresh();
       });
-      syncBacklogLocation("project-edit", "", selectedProjectID);
+      backlogRouter.sync({ view: "project-edit", projectID: selectedProjectID });
       return;
     }
 
@@ -254,45 +258,44 @@ const shell = shellAPI.createShell({
       setMetrics([]);
       setHeader("Projects", "Project catalog separated from create and edit flows.", `${projects.length} projects`);
       setPanels([
-        {
+        crudListPanel({
           span: "span-12",
           title: "Project Catalog",
           copy: "Create, edit, or delete projects from the list instead of mixing forms into the view.",
-          html: `
-            ${sectionToolbar("Projects", [actionButton("Create project", "primary", 'data-action="open-project-create"')])}
-            ${projects.length
-              ? `<div class="row-list">${projects.map((project) => {
-                  const team = workspace.teams.find((item) => item.id === project.teamID);
-                  const projectTasks = tasks.filter((task) => task.projectID === project.id).length;
-                  return `
-                    <article class="row-item two-col">
-                      <div class="row-main">
-                        <span class="row-title">${escapeHTML(project.name)}</span>
-                        <span class="row-subtitle">${escapeHTML(team?.name || project.teamID)}</span>
+          toolbarTitle: "Projects",
+          toolbarActions: [actionButton("Create project", "primary", 'data-action="open-project-create"')],
+          content: projects.length
+            ? `<div class="row-list">${projects.map((project) => {
+                const team = workspace.teams.find((item) => item.id === project.teamID);
+                const projectTasks = tasks.filter((task) => task.projectID === project.id).length;
+                return `
+                  <article class="row-item two-col">
+                    <div class="row-main">
+                      <span class="row-title">${escapeHTML(project.name)}</span>
+                      <span class="row-subtitle">${escapeHTML(team?.name || project.teamID)}</span>
+                    </div>
+                    <div class="row-meta">
+                      <span>${escapeHTML(`${projectTasks} tasks`)}</span>
+                      <div class="inline-actions">
+                        <button class="shell-button-secondary" type="button" data-project-edit="${escapeHTML(project.id)}">Edit</button>
+                        <button class="shell-button-secondary" type="button" data-project-delete="${escapeHTML(project.id)}">Delete</button>
                       </div>
-                      <div class="row-meta">
-                        <span>${escapeHTML(`${projectTasks} tasks`)}</span>
-                        <div class="inline-actions">
-                          <button class="shell-button-secondary" type="button" data-project-edit="${escapeHTML(project.id)}">Edit</button>
-                          <button class="shell-button-secondary" type="button" data-project-delete="${escapeHTML(project.id)}">Delete</button>
-                        </div>
-                      </div>
-                    </article>
-                  `;
-                }).join("")}</div>`
-              : renderEmpty("No projects", "Create the first project to begin planning.")}
-          `
-        }
+                    </div>
+                  </article>
+                `;
+              }).join("")}</div>`
+            : renderEmpty("No projects", "Create the first project to begin planning.")
+        })
       ]);
       document.querySelector('[data-action="open-project-create"]')?.addEventListener("click", async () => {
         state.currentView = "project-create";
-        syncBacklogLocation("project-create");
+        backlogRouter.sync({ view: "project-create" });
         await refresh();
       });
       document.querySelectorAll("[data-project-edit]").forEach((node) => {
         node.addEventListener("click", async () => {
           state.currentView = "project-edit";
-          syncBacklogLocation("project-edit", "", node.dataset.projectEdit);
+          backlogRouter.sync({ view: "project-edit", projectID: node.dataset.projectEdit });
           await refresh();
         });
       });
@@ -303,7 +306,7 @@ const shell = shellAPI.createShell({
           await refresh();
         });
       });
-      syncBacklogLocation("projects");
+      backlogRouter.sync({ view: "projects" });
       return;
     }
 
@@ -336,11 +339,14 @@ const shell = shellAPI.createShell({
       setMetrics([]);
       setHeader("Create Task", "Create new work from a dedicated screen instead of mixing the form into the board.", `${tasks.length} tasks`);
       setPanels([
-        {
+        crudFormPanel({
           span: "span-8",
           title: "Create Task",
           copy: "Add title, description, assignee, and project assignment.",
-          html: `
+          toolbarTitle: "Task details",
+          backAction: 'data-action="open-board"',
+          backLabel: "Back to board",
+          content: `
             <form id="task-create-form" class="compact-stack">
               <input id="task-title" class="shell-input" placeholder="Task title" required>
               <textarea id="task-description" class="shell-textarea" placeholder="Description"></textarea>
@@ -354,13 +360,15 @@ const shell = shellAPI.createShell({
               <button class="shell-button" type="submit">Create task</button>
             </form>
           `
-        },
-        {
+        }),
+        crudSidePanel({
           span: "span-4",
           title: "Board",
           copy: "Return to the board after creating the task.",
-          html: `${sectionToolbar("Tasks", [actionButton("Back to board", "secondary", 'data-action="open-board"')])}`
-        }
+          toolbarTitle: "Tasks",
+          backAction: 'data-action="open-board"',
+          backLabel: "Back to board"
+        })
       ]);
       document.getElementById("task-create-form")?.addEventListener("submit", async (event) => {
         event.preventDefault();
@@ -375,16 +383,16 @@ const shell = shellAPI.createShell({
         });
         selectedTaskID = task.id;
         state.currentView = "task-edit";
-        syncBacklogLocation("task-edit", task.id);
+        backlogRouter.sync({ view: "task-edit", taskID: task.id });
         await refresh();
       });
       document.querySelector('[data-action="open-board"]')?.addEventListener("click", async () => {
         state.currentView = "board";
-        syncBacklogLocation("board");
+        backlogRouter.sync({ view: "board" });
         await refresh();
       });
       ["task-title", "task-description"].forEach((id) => shellAPI.attachTagAutocomplete(document.getElementById(id)));
-      syncBacklogLocation("task-create");
+      backlogRouter.sync({ view: "task-create" });
       return;
     }
 
@@ -393,11 +401,14 @@ const shell = shellAPI.createShell({
       setMetrics([]);
       setHeader(detail ? detail.task.title : "Task Detail", "Update one task at a time from a dedicated edit screen.", detail ? statusLabel(detail.task.status) : "No task");
       setPanels([
-        {
+        crudFormPanel({
           span: "span-8",
           title: detail ? detail.task.title : "Task Detail",
           copy: detail ? "Inspect the task, update metadata, and review history." : "Return to the board and pick another task.",
-          html: detail ? `
+          toolbarTitle: detail?.task?.title || "Task details",
+          backAction: 'data-action="open-board"',
+          backLabel: "Back to board",
+          content: detail ? `
             <div class="detail-grid">
               <form id="task-detail-form" class="compact-stack">
                 <input id="detail-title" class="shell-input" value="${escapeHTML(detail.task.title)}" required>
@@ -449,13 +460,15 @@ const shell = shellAPI.createShell({
               </form>
             </div>
           ` : renderEmpty("No task selected", "Pick a task from the board.")
-        },
-        {
+        }),
+        crudSidePanel({
           span: "span-4",
           title: "Board",
           copy: "Return to the board when you're done editing.",
-          html: `${sectionToolbar("Tasks", [actionButton("Back to board", "secondary", 'data-action="open-board"')])}`
-        }
+          toolbarTitle: "Tasks",
+          backAction: 'data-action="open-board"',
+          backLabel: "Back to board"
+        })
       ]);
       document.getElementById("task-detail-form")?.addEventListener("submit", async (event) => {
         event.preventDefault();
@@ -473,7 +486,7 @@ const shell = shellAPI.createShell({
         if (!window.confirm("Delete this task and its comments?")) return;
         await requestJSON(`/api/tasks/${selectedTaskFromLocation}`, { method: "DELETE" });
         state.currentView = "board";
-        syncBacklogLocation("board");
+        backlogRouter.sync({ view: "board" });
         await refresh();
       });
       document.getElementById("comment-form")?.addEventListener("submit", async (event) => {
@@ -486,11 +499,11 @@ const shell = shellAPI.createShell({
       });
       document.querySelector('[data-action="open-board"]')?.addEventListener("click", async () => {
         state.currentView = "board";
-        syncBacklogLocation("board");
+        backlogRouter.sync({ view: "board" });
         await refresh();
       });
       ["detail-title", "detail-description", "comment-body"].forEach((id) => shellAPI.attachTagAutocomplete(document.getElementById(id)));
-      syncBacklogLocation("task-edit", selectedTaskFromLocation);
+      backlogRouter.sync({ view: "task-edit", taskID: selectedTaskFromLocation });
       return;
     }
 
@@ -499,7 +512,7 @@ const shell = shellAPI.createShell({
       selectedTaskID = locationState.taskID;
     }
     selectedTaskID = filteredTasks.some((task) => task.id === selectedTaskID) ? selectedTaskID : filteredTasks[0]?.id ?? null;
-    syncBacklogLocation(state.currentView);
+    backlogRouter.sync({ view: state.currentView });
 
     setMetrics([
       { label: "New", value: filteredTasks.filter((task) => task.status === "new").length, meta: "Fresh work" },
@@ -605,14 +618,14 @@ const shell = shellAPI.createShell({
 
     document.querySelector('[data-action="open-task-create"]')?.addEventListener("click", async () => {
       state.currentView = "task-create";
-      syncBacklogLocation("task-create");
+      backlogRouter.sync({ view: "task-create" });
       await refresh();
     });
 
     document.querySelector('[data-action="open-task-edit"]')?.addEventListener("click", async () => {
       if (!selectedTaskID) return;
       state.currentView = "task-edit";
-      syncBacklogLocation("task-edit", selectedTaskID);
+      backlogRouter.sync({ view: "task-edit", taskID: selectedTaskID });
       await refresh();
     });
 
@@ -620,7 +633,7 @@ const shell = shellAPI.createShell({
       cardNode.addEventListener("click", async () => {
         selectedTaskID = cardNode.dataset.taskId;
         state.currentView = "task-edit";
-        syncBacklogLocation("task-edit", selectedTaskID);
+        backlogRouter.sync({ view: "task-edit", taskID: selectedTaskID });
         await refresh();
       });
       cardNode.addEventListener("dragstart", () => {

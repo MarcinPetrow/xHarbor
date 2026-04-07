@@ -86,20 +86,13 @@ function similarTagSuggestions(tags = [], aliases = []) {
 
   return suggestions;
 }
+const tagQueryRouter = shellAPI.createQueryRouter({
+  defaults: { query: "" },
+  read: (location) => shellAPI.normalizeTag(location.query),
+  write: (query = "") => ({ query: shellAPI.normalizeTag(query) })
+});
 
-function readQueryFromLocation() {
-  const location = shellAPI.readLocationState({ query: "" });
-  return shellAPI.normalizeTag(location.query);
-}
-
-function syncLocationQuery(query) {
-  shellAPI.syncLocationState(
-    { query: shellAPI.normalizeTag(query) },
-    { query: "" }
-  );
-}
-
-let currentQuery = readQueryFromLocation();
+let currentQuery = tagQueryRouter.read();
 
 const shell = shellAPI.createShell({
   appName: "xTag",
@@ -140,7 +133,7 @@ const shell = shellAPI.createShell({
     }
 
     currentQuery = shellAPI.normalizeTag(currentQuery);
-    syncLocationQuery(currentQuery);
+    tagQueryRouter.sync(currentQuery);
     const payload = await fetchTags(currentQuery);
     const mergeSuggestions = similarTagSuggestions(payload.tags, payload.aliases);
     setHeader("Tag Search", "Aggregate case-insensitive hashtag usage across conversations, tasks, and documentation.", payload.syncStatus.lastSyncSucceeded ? "Indexed" : "Sync pending");

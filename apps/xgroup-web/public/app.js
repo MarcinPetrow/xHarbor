@@ -3,6 +3,8 @@ const requestJSON = shellAPI.requestJSON;
 const actionButton = shellAPI.actionButton;
 const sectionToolbar = shellAPI.sectionToolbar;
 const rowItem = shellAPI.rowItem;
+const crudListPanel = shellAPI.crudListPanel;
+const crudFormPanel = shellAPI.crudFormPanel;
 
 function membershipKey(membership) {
   return `${membership.userID}::${membership.teamID}`;
@@ -404,12 +406,13 @@ const shell = shellAPI.createShell({
       setHeader("Teams", "Manage workspace teams through dedicated list, create, and edit screens.", `${snapshot.teams.length} teams`);
 
       if (route.mode === "create") {
-        setPanels([{
+        setPanels([crudFormPanel({
           span: "span-12",
           title: "Create Team",
           copy: "Add a new delivery group without mixing the form into the registry view.",
-          html: `
-            ${sectionToolbar("Team details", [actionButton("Back to list", "secondary", `data-action="teams-back"`)] )}
+          toolbarTitle: "Team details",
+          backAction: 'data-action="teams-back"',
+          content: `
             <form id="team-create-form" class="surface-stack">
               <input id="team-name" class="shell-input" placeholder="Team name" required>
               <div class="inline-actions">
@@ -417,7 +420,7 @@ const shell = shellAPI.createShell({
               </div>
             </form>
           `
-        }]);
+        })]);
         document.getElementById("team-create-form")?.addEventListener("submit", async (event) => {
           event.preventDefault();
           await requestJSON("/api/teams", { method: "POST", body: JSON.stringify({ name: document.getElementById("team-name").value }) });
@@ -425,12 +428,13 @@ const shell = shellAPI.createShell({
           await refresh();
         });
       } else if (route.mode === "edit" && selectedTeam) {
-        setPanels([{
+        setPanels([crudFormPanel({
           span: "span-12",
           title: "Edit Team",
           copy: "Update one team at a time from a dedicated edit screen.",
-          html: `
-            ${sectionToolbar(selectedTeam.name, [actionButton("Back to list", "secondary", `data-action="teams-back"`)] )}
+          toolbarTitle: selectedTeam.name,
+          backAction: 'data-action="teams-back"',
+          content: `
             <form id="team-edit-form" class="surface-stack">
               <input id="team-edit-name" class="shell-input" value="${escapeHTML(selectedTeam.name)}" required>
               <div class="inline-actions">
@@ -439,7 +443,7 @@ const shell = shellAPI.createShell({
               </div>
             </form>
           `
-        }]);
+        })]);
         document.getElementById("team-edit-form")?.addEventListener("submit", async (event) => {
           event.preventDefault();
           await requestJSON(`/api/teams/${selectedTeam.id}`, {
@@ -456,28 +460,27 @@ const shell = shellAPI.createShell({
           await refresh();
         });
       } else {
-        setPanels([{
+        setPanels([crudListPanel({
           span: "span-12",
           title: "Team Directory",
           copy: "Browse teams first, then branch into separate create or edit screens.",
-          html: `
-            ${sectionToolbar("Teams", [actionButton("Create team", "primary", `data-action="teams-create-view"`)] )}
-            ${denseTable(
-              ["Team", "Members", "Actions"],
-              snapshot.teams.map((team) => {
-                const memberCount = snapshot.memberships.filter((membership) => membership.teamID === team.id).length;
-                return [
-                  escapeHTML(team.name),
-                  escapeHTML(`${memberCount} memberships`),
-                  actionsMarkup([
-                    actionButton("Edit", "secondary", `data-action="teams-edit-view" data-team-id="${team.id}"`),
-                    actionButton("Delete", "danger", `data-action="teams-delete" data-team-id="${team.id}" data-team-name="${escapeHTML(team.name)}"`)
-                  ])
-                ];
-              })
-            )}
-          `
-        }]);
+          toolbarTitle: "Teams",
+          toolbarActions: [actionButton("Create team", "primary", `data-action="teams-create-view"`)],
+          content: denseTable(
+            ["Team", "Members", "Actions"],
+            snapshot.teams.map((team) => {
+              const memberCount = snapshot.memberships.filter((membership) => membership.teamID === team.id).length;
+              return [
+                escapeHTML(team.name),
+                escapeHTML(`${memberCount} memberships`),
+                actionsMarkup([
+                  actionButton("Edit", "secondary", `data-action="teams-edit-view" data-team-id="${team.id}"`),
+                  actionButton("Delete", "danger", `data-action="teams-delete" data-team-id="${team.id}" data-team-name="${escapeHTML(team.name)}"`)
+                ])
+              ];
+            })
+          )
+        })]);
       }
 
       document.getElementById("view-content")?.addEventListener("click", async (event) => {
@@ -512,12 +515,13 @@ const shell = shellAPI.createShell({
       setHeader("People", "Manage the people directory through separate list, create, and edit screens.", `${snapshot.users.length} users`);
 
       if (route.mode === "create") {
-        setPanels([{
+        setPanels([crudFormPanel({
           span: "span-12",
           title: "Create User",
           copy: "Create a person record in a dedicated form view.",
-          html: `
-            ${sectionToolbar("Person details", [actionButton("Back to list", "secondary", `data-action="users-back"`)] )}
+          toolbarTitle: "Person details",
+          backAction: 'data-action="users-back"',
+          content: `
             <form id="user-create-form" class="surface-stack">
               <input id="user-first-name" class="shell-input" placeholder="First name" required>
               <input id="user-last-name" class="shell-input" placeholder="Last name" required>
@@ -544,7 +548,7 @@ const shell = shellAPI.createShell({
               </div>
             </form>
           `
-        }]);
+        })]);
         document.getElementById("user-create-form")?.addEventListener("submit", async (event) => {
           event.preventDefault();
           const avatarDataURL = await selectedAvatarDataURL("user-avatar");
@@ -568,12 +572,13 @@ const shell = shellAPI.createShell({
           await refresh();
         });
       } else if (route.mode === "edit" && selectedUser) {
-        setPanels([{
+        setPanels([crudFormPanel({
           span: "span-12",
           title: "Edit User",
           copy: "Update one account at a time from a dedicated edit screen.",
-          html: `
-            ${sectionToolbar(userFullName(selectedUser), [actionButton("Back to list", "secondary", `data-action="users-back"`)] )}
+          toolbarTitle: userFullName(selectedUser),
+          backAction: 'data-action="users-back"',
+          content: `
             <form id="user-edit-form" class="surface-stack">
               <input id="user-edit-first-name" class="shell-input" value="${escapeHTML(selectedUser.firstName || "")}" required>
               <input id="user-edit-last-name" class="shell-input" value="${escapeHTML(selectedUser.lastName || "")}" required>
@@ -593,7 +598,7 @@ const shell = shellAPI.createShell({
               </div>
             </form>
           `
-        }]);
+        })]);
         document.getElementById("user-edit-form")?.addEventListener("submit", async (event) => {
           event.preventDefault();
           const avatarDataURL = await selectedAvatarDataURL("user-edit-avatar");
@@ -622,30 +627,29 @@ const shell = shellAPI.createShell({
           await refresh();
         });
       } else {
-        setPanels([{
+        setPanels([crudListPanel({
           span: "span-12",
           title: "People Directory",
           copy: "Browse the directory first, then branch into create or edit screens.",
-          html: `
-            ${sectionToolbar("People", [actionButton("Create user", "primary", `data-action="users-create-view"`)] )}
-            ${denseTable(
-              ["User", "Profile", "State", "Actions"],
-              snapshot.users.map((user) => {
-                const presenceState = presence.find((item) => item.userID === user.id)?.isOnline ? "online" : "offline";
-                const manager = snapshot.users.find((item) => item.id === user.managerUserID);
-                return [
-                  `<strong>${userRef(user)}</strong><span class="dense-sub">${escapeHTML(user.email)}</span>`,
-                  `${escapeHTML((user.department || "No department"))}<span class="dense-sub">${escapeHTML(user.title || "No title")} · ${manager ? userRef(manager) : escapeHTML("No manager")}</span>`,
-                  `<span class="status-pill">${escapeHTML(user.status)}</span><span class="dense-sub">${escapeHTML(presenceState)}</span>`,
-                  actionsMarkup([
-                    actionButton("Edit", "secondary", `data-action="users-edit-view" data-user-id="${user.id}"`),
-                    actionButton("Delete", "danger", `data-action="users-delete" data-user-id="${user.id}" data-user-name="${escapeHTML(userFullName(user))}"`)
-                  ])
-                ];
-              })
-            )}
-          `
-        }]);
+          toolbarTitle: "People",
+          toolbarActions: [actionButton("Create user", "primary", `data-action="users-create-view"`)],
+          content: denseTable(
+            ["User", "Profile", "State", "Actions"],
+            snapshot.users.map((user) => {
+              const presenceState = presence.find((item) => item.userID === user.id)?.isOnline ? "online" : "offline";
+              const manager = snapshot.users.find((item) => item.id === user.managerUserID);
+              return [
+                `<strong>${userRef(user)}</strong><span class="dense-sub">${escapeHTML(user.email)}</span>`,
+                `${escapeHTML((user.department || "No department"))}<span class="dense-sub">${escapeHTML(user.title || "No title")} · ${manager ? userRef(manager) : escapeHTML("No manager")}</span>`,
+                `<span class="status-pill">${escapeHTML(user.status)}</span><span class="dense-sub">${escapeHTML(presenceState)}</span>`,
+                actionsMarkup([
+                  actionButton("Edit", "secondary", `data-action="users-edit-view" data-user-id="${user.id}"`),
+                  actionButton("Delete", "danger", `data-action="users-delete" data-user-id="${user.id}" data-user-name="${escapeHTML(userFullName(user))}"`)
+                ])
+              ];
+            })
+          )
+        })]);
       }
 
       document.getElementById("view-content")?.addEventListener("click", async (event) => {
@@ -849,12 +853,13 @@ const shell = shellAPI.createShell({
       setHeader("Memberships", "Manage role links through separate list, create, and edit screens.", `${snapshot.memberships.length} role links`);
 
       if (route.mode === "create") {
-        setPanels([{
+        setPanels([crudFormPanel({
           span: "span-12",
           title: "Create Membership",
           copy: "Assign a user to a team from a dedicated form screen.",
-          html: `
-            ${sectionToolbar("Membership details", [actionButton("Back to list", "secondary", `data-action="memberships-back"`)] )}
+          toolbarTitle: "Membership details",
+          backAction: 'data-action="memberships-back"',
+          content: `
             <form id="membership-create-form" class="surface-stack">
               <select id="membership-user" class="shell-select">${optionMarkup(snapshot.users, (user) => user.id, (user) => user.displayName)}</select>
               <select id="membership-team" class="shell-select">${optionMarkup(snapshot.teams, (team) => team.id, (team) => team.name)}</select>
@@ -870,7 +875,7 @@ const shell = shellAPI.createShell({
               </div>
             </form>
           `
-        }]);
+        })]);
         document.getElementById("membership-create-form")?.addEventListener("submit", async (event) => {
           event.preventDefault();
           await requestJSON("/api/memberships", {
@@ -887,12 +892,13 @@ const shell = shellAPI.createShell({
       } else if (route.mode === "edit" && selectedMembership) {
         const membershipUser = snapshot.users.find((item) => item.id === selectedMembership.userID);
         const membershipTeam = snapshot.teams.find((item) => item.id === selectedMembership.teamID);
-        setPanels([{
+        setPanels([crudFormPanel({
           span: "span-12",
           title: "Edit Membership",
           copy: "Change one role link or remove it entirely from a dedicated edit screen.",
-          html: `
-            ${sectionToolbar(`${membershipUser?.displayName || selectedMembership.userID} → ${membershipTeam?.name || selectedMembership.teamID}`, [actionButton("Back to list", "secondary", `data-action="memberships-back"`)] )}
+          toolbarTitle: `${membershipUser?.displayName || selectedMembership.userID} → ${membershipTeam?.name || selectedMembership.teamID}`,
+          backAction: 'data-action="memberships-back"',
+          content: `
             <form id="membership-edit-form" class="surface-stack">
               <select id="membership-edit-role" class="shell-select">
                 <option value="owner"${selectedMembership.role === "owner" ? " selected" : ""}>owner</option>
@@ -907,7 +913,7 @@ const shell = shellAPI.createShell({
               </div>
             </form>
           `
-        }]);
+        })]);
         document.getElementById("membership-edit-form")?.addEventListener("submit", async (event) => {
           event.preventDefault();
           await requestJSON(`/api/memberships/${selectedMembership.userID}/${selectedMembership.teamID}`, {
@@ -924,30 +930,29 @@ const shell = shellAPI.createShell({
           await refresh();
         });
       } else {
-        setPanels([{
+        setPanels([crudListPanel({
           span: "span-12",
           title: "Role Map",
           copy: "Browse the role inventory first, then branch into create or edit screens.",
-          html: `
-            ${sectionToolbar("Memberships", [actionButton("Create membership", "primary", `data-action="memberships-create-view"`)] )}
-            ${denseTable(
-              ["User", "Team", "Role", "Actions"],
-              snapshot.memberships.map((membership) => {
-                const user = snapshot.users.find((item) => item.id === membership.userID);
-                const team = snapshot.teams.find((item) => item.id === membership.teamID);
-                return [
-                  user ? userRef(user) : escapeHTML(membership.userID),
-                  escapeHTML(team?.name || membership.teamID),
-                  `<span class="status-pill">${escapeHTML(membership.role)}</span>`,
-                  actionsMarkup([
-                    actionButton("Edit", "secondary", `data-action="memberships-edit-view" data-membership-id="${membershipKey(membership)}"`),
-                    actionButton("Delete", "danger", `data-action="memberships-delete" data-user-id="${membership.userID}" data-team-id="${membership.teamID}" data-membership-name="${escapeHTML(`${user?.displayName || membership.userID} → ${team?.name || membership.teamID}`)}"`)
-                  ])
-                ];
-              })
-            )}
-          `
-        }]);
+          toolbarTitle: "Memberships",
+          toolbarActions: [actionButton("Create membership", "primary", `data-action="memberships-create-view"`)],
+          content: denseTable(
+            ["User", "Team", "Role", "Actions"],
+            snapshot.memberships.map((membership) => {
+              const user = snapshot.users.find((item) => item.id === membership.userID);
+              const team = snapshot.teams.find((item) => item.id === membership.teamID);
+              return [
+                user ? userRef(user) : escapeHTML(membership.userID),
+                escapeHTML(team?.name || membership.teamID),
+                `<span class="status-pill">${escapeHTML(membership.role)}</span>`,
+                actionsMarkup([
+                  actionButton("Edit", "secondary", `data-action="memberships-edit-view" data-membership-id="${membershipKey(membership)}"`),
+                  actionButton("Delete", "danger", `data-action="memberships-delete" data-user-id="${membership.userID}" data-team-id="${membership.teamID}" data-membership-name="${escapeHTML(`${user?.displayName || membership.userID} → ${team?.name || membership.teamID}`)}"`)
+                ])
+              ];
+            })
+          )
+        })]);
       }
 
       document.getElementById("view-content")?.addEventListener("click", async (event) => {
@@ -981,12 +986,13 @@ const shell = shellAPI.createShell({
       setHeader("Invitations", "Manage invitations through a dedicated list and a separate create screen.", `${invitations.length} invitations`);
 
       if (route.mode === "create") {
-        setPanels([{
+        setPanels([crudFormPanel({
           span: "span-12",
           title: "Create Invitation",
           copy: "Prepare a pending workspace invite without mixing it into the registry list.",
-          html: `
-            ${sectionToolbar("Invitation details", [actionButton("Back to list", "secondary", `data-action="invitations-back"`)] )}
+          toolbarTitle: "Invitation details",
+          backAction: 'data-action="invitations-back"',
+          content: `
             <form id="invitation-form" class="surface-stack">
               <input id="invitation-name" class="shell-input" placeholder="Display name" required>
               <input id="invitation-email" class="shell-input" type="email" placeholder="Email" required>
@@ -1003,7 +1009,7 @@ const shell = shellAPI.createShell({
               </div>
             </form>
           `
-        }]);
+        })]);
         document.getElementById("invitation-form")?.addEventListener("submit", async (event) => {
           event.preventDefault();
           await requestJSON("/api/invitations", {
@@ -1019,31 +1025,30 @@ const shell = shellAPI.createShell({
           await refresh();
         });
       } else {
-        setPanels([{
+        setPanels([crudListPanel({
           span: "span-12",
           title: "Invitations",
           copy: "List existing invitations first, then branch into create or follow-up actions.",
-          html: `
-            ${sectionToolbar("Invitations", [actionButton("Create invitation", "primary", `data-action="invitations-create-view"`)] )}
-            ${invitations.length
-              ? denseTable(["Invite", "Access", "State", "Actions"], invitations.map((invitation) => {
-                  const team = snapshot.teams.find((item) => item.id === invitation.teamID);
-                  const buttons = invitation.status === "pending"
-                    ? [
-                        actionButton("Accept", "primary", `data-action="accept-invitation" data-invitation-id="${invitation.id}"`),
-                        actionButton("Revoke", "danger", `data-action="revoke-invitation" data-invitation-id="${invitation.id}"`)
-                      ]
-                    : [];
-                  return [
-                    `<strong>${escapeHTML(invitation.displayName)}</strong><span class="dense-sub">${escapeHTML(invitation.email)}</span>`,
-                    escapeHTML(`${team?.name || invitation.teamID} · ${invitation.role}`),
-                    `<span class="status-pill">${escapeHTML(invitation.status)}</span>`,
-                    `<div class="inline-actions">${buttons.join("")}</div>`
-                  ];
-                }))
-              : renderEmpty("No invitations", "Create an invitation to start provisioning.")}
-          `
-        }]);
+          toolbarTitle: "Invitations",
+          toolbarActions: [actionButton("Create invitation", "primary", `data-action="invitations-create-view"`)],
+          content: invitations.length
+            ? denseTable(["Invite", "Access", "State", "Actions"], invitations.map((invitation) => {
+                const team = snapshot.teams.find((item) => item.id === invitation.teamID);
+                const buttons = invitation.status === "pending"
+                  ? [
+                      actionButton("Accept", "primary", `data-action="accept-invitation" data-invitation-id="${invitation.id}"`),
+                      actionButton("Revoke", "danger", `data-action="revoke-invitation" data-invitation-id="${invitation.id}"`)
+                    ]
+                  : [];
+                return [
+                  `<strong>${escapeHTML(invitation.displayName)}</strong><span class="dense-sub">${escapeHTML(invitation.email)}</span>`,
+                  escapeHTML(`${team?.name || invitation.teamID} · ${invitation.role}`),
+                  `<span class="status-pill">${escapeHTML(invitation.status)}</span>`,
+                  `<div class="inline-actions">${buttons.join("")}</div>`
+                ];
+              }))
+            : renderEmpty("No invitations", "Create an invitation to start provisioning.")
+        })]);
       }
 
       document.getElementById("view-content")?.addEventListener("click", async (event) => {

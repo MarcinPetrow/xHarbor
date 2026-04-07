@@ -5,24 +5,17 @@ let docsCache = null;
 let selectedPageID = "";
 let docMode = "preview";
 const expandedPageIDs = new Set();
-
-function readDocLocation() {
-  const location = shellAPI.readLocationState({
-    pageId: "",
-    mode: "preview"
-  });
-  return {
+const docRouter = shellAPI.createQueryRouter({
+  defaults: { pageId: "", mode: "preview" },
+  read: (location) => ({
     pageID: location.pageId,
     mode: location.mode
-  };
-}
-
-function syncDocLocation(pageID, mode) {
-  shellAPI.syncLocationState(
-    { pageId: pageID, mode },
-    { pageId: "", mode: "preview" }
-  );
-}
+  }),
+  write: ({ pageID = "", mode = "preview" }) => ({
+    pageId: pageID,
+    mode
+  })
+});
 
 const loadSession = shellAPI.loadSession;
 const loadUsers = shellAPI.loadUsers;
@@ -319,7 +312,7 @@ const shell = shellAPI.createShell({
     }
 
     const docs = await fetchDocs();
-    const locationState = readDocLocation();
+    const locationState = docRouter.read();
     if (locationState.pageID && docs.pages.some((page) => page.id === locationState.pageID)) {
       selectedPageID = locationState.pageID;
       ensureExpandedPath(selectedPageID);
@@ -348,7 +341,7 @@ const shell = shellAPI.createShell({
           selectedPageID = button.dataset.pageId;
           docMode = "preview";
           ensureExpandedPath(selectedPageID);
-          syncDocLocation(selectedPageID, docMode);
+          docRouter.sync({ pageID: selectedPageID, mode: docMode });
           await refresh();
         });
       });
@@ -381,7 +374,7 @@ const shell = shellAPI.createShell({
           docMode = "preview";
           ensureExpandedPath(selectedPageID);
           expandedPageIDs.add(parentPageID);
-          syncDocLocation(selectedPageID, docMode);
+          docRouter.sync({ pageID: selectedPageID, mode: docMode });
           await refresh();
         });
       });
@@ -396,11 +389,11 @@ const shell = shellAPI.createShell({
         selectedPageID = created.id;
         docMode = "preview";
         ensureExpandedPath(selectedPageID);
-        syncDocLocation(selectedPageID, docMode);
+        docRouter.sync({ pageID: selectedPageID, mode: docMode });
         await refresh();
       });
     }
-    syncDocLocation(selectedPageID, docMode);
+    docRouter.sync({ pageID: selectedPageID, mode: docMode });
     setMetrics([]);
     setHeader("", "", "", { hidden: true });
     setPanels([
@@ -516,19 +509,19 @@ const shell = shellAPI.createShell({
 
     document.getElementById("doc-preview-mode")?.addEventListener("click", async () => {
       docMode = "preview";
-      syncDocLocation(selectedPageID, docMode);
+      docRouter.sync({ pageID: selectedPageID, mode: docMode });
       await refresh();
     });
 
     document.getElementById("doc-edit-mode")?.addEventListener("click", async () => {
       docMode = "edit";
-      syncDocLocation(selectedPageID, docMode);
+      docRouter.sync({ pageID: selectedPageID, mode: docMode });
       await refresh();
     });
 
     document.getElementById("doc-history-mode")?.addEventListener("click", async () => {
       docMode = "history";
-      syncDocLocation(selectedPageID, docMode);
+      docRouter.sync({ pageID: selectedPageID, mode: docMode });
       await refresh();
     });
 

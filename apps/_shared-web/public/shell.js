@@ -62,6 +62,19 @@
     window.history.replaceState({}, "", `${url.pathname}${url.search}`);
   }
 
+  function createQueryRouter({ defaults = {}, read, write } = {}) {
+    return {
+      read() {
+        const rawState = readLocationState(defaults);
+        return typeof read === "function" ? read(rawState) : rawState;
+      },
+      sync(values = {}) {
+        const nextState = typeof write === "function" ? write(values) : values;
+        syncLocationState(nextState, defaults);
+      }
+    };
+  }
+
   function renderTagText(value) {
     const input = String(value ?? "");
     let cursor = 0;
@@ -464,6 +477,66 @@
         ${options.actions ? `<div class="row-actions">${options.actions}</div>` : ""}
       </article>
     `;
+  }
+
+  function crudListPanel({
+    span = "span-12",
+    title,
+    copy,
+    toolbarTitle,
+    toolbarActions = [],
+    content
+  }) {
+    return {
+      span,
+      title,
+      copy,
+      html: `
+        ${sectionToolbar(toolbarTitle, toolbarActions)}
+        ${content}
+      `
+    };
+  }
+
+  function crudFormPanel({
+    span = "span-12",
+    title,
+    copy,
+    toolbarTitle,
+    backAction,
+    backLabel = "Back to list",
+    content
+  }) {
+    const actions = backAction ? [actionButton(backLabel, "secondary", backAction)] : [];
+    return {
+      span,
+      title,
+      copy,
+      html: `
+        ${sectionToolbar(toolbarTitle, actions)}
+        ${content}
+      `
+    };
+  }
+
+  function crudSidePanel({
+    span = "span-4",
+    title,
+    copy,
+    toolbarTitle,
+    backAction,
+    backLabel = "Back",
+    content = ""
+  }) {
+    return {
+      span,
+      title,
+      copy,
+      html: `
+        ${sectionToolbar(toolbarTitle, backAction ? [actionButton(backLabel, "secondary", backAction)] : [])}
+        ${content}
+      `
+    };
   }
 
   function renderUserHoverCard(user, allUsers) {
@@ -938,6 +1011,7 @@
     normalizeTag,
     readLocationState,
     syncLocationState,
+    createQueryRouter,
     buildTagSearchURL,
     renderTagText,
     renderAvatar,
@@ -955,6 +1029,9 @@
     dataCard,
     actionButton,
     sectionToolbar,
-    rowItem
+    rowItem,
+    crudListPanel,
+    crudFormPanel,
+    crudSidePanel
   };
 })();

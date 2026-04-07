@@ -16,29 +16,21 @@ let lastRenderedThreadKey = "";
 let lastRenderedMessageKey = "";
 let chatStickToBottom = true;
 let pendingReadThreadKey = "";
-
-function readThreadFromLocation() {
-  const location = shellAPI.readLocationState({
-    threadKind: "",
-    threadId: ""
-  });
-  const kind = location.threadKind;
-  const id = location.threadId;
-  if (!id || (kind !== "room" && kind !== "direct")) {
-    return null;
-  }
-  return { kind, id };
-}
-
-function syncThreadLocation(thread) {
-  shellAPI.syncLocationState(
-    {
-      threadKind: thread?.id ? thread.kind : "",
-      threadId: thread?.id ? thread.id : ""
-    },
-    { threadKind: "", threadId: "" }
-  );
-}
+const threadRouter = shellAPI.createQueryRouter({
+  defaults: { threadKind: "", threadId: "" },
+  read: (location) => {
+    const kind = location.threadKind;
+    const id = location.threadId;
+    if (!id || (kind !== "room" && kind !== "direct")) {
+      return null;
+    }
+    return { kind, id };
+  },
+  write: (thread) => ({
+    threadKind: thread?.id ? thread.kind : "",
+    threadId: thread?.id ? thread.id : ""
+  })
+});
 
 const loadUsers = shellAPI.loadUsers;
 const loadSession = shellAPI.loadSession;
@@ -441,7 +433,7 @@ shell = shellAPI.createShell({
       ...directThreads.map((thread) => ({ kind: "direct", ...thread }))
     ];
 
-    const locationThread = readThreadFromLocation();
+    const locationThread = threadRouter.read();
     if (locationThread && availableThreads.some((thread) => thread.kind === locationThread.kind && thread.id === locationThread.id)) {
       selectedThread = locationThread;
     }
@@ -450,7 +442,7 @@ shell = shellAPI.createShell({
       selectedThread = availableThreads[0] ? { kind: availableThreads[0].kind, id: availableThreads[0].id } : { kind: "room", id: null };
     }
 
-    syncThreadLocation(selectedThread);
+    threadRouter.sync(selectedThread);
     const currentThreadKey = selectedThread.id ? `${selectedThread.kind}:${selectedThread.id}` : "";
     const shouldStickToBottom = chatStickToBottom;
 
@@ -604,7 +596,7 @@ shell = shellAPI.createShell({
     document.querySelectorAll("[data-thread-id]").forEach((node) => {
       node.addEventListener("click", async () => {
         selectedThread = { kind: node.dataset.threadKind, id: node.dataset.threadId };
-        syncThreadLocation(selectedThread);
+        threadRouter.sync(selectedThread);
         forceScrollToBottom = true;
         chatStickToBottom = true;
         await refresh();
@@ -629,7 +621,7 @@ shell = shellAPI.createShell({
         })
       });
       selectedThread = { kind: "room", id: room.id };
-      syncThreadLocation(selectedThread);
+      threadRouter.sync(selectedThread);
       await refresh();
     });
 
@@ -640,7 +632,7 @@ shell = shellAPI.createShell({
         body: JSON.stringify({ participantUserID: document.getElementById("dm-user").value })
       });
       selectedThread = { kind: "direct", id: conversation.id };
-      syncThreadLocation(selectedThread);
+      threadRouter.sync(selectedThread);
       await refresh();
     });
 
