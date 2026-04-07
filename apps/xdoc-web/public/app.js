@@ -95,12 +95,20 @@ async function refreshWorkspace() {
   });
 }
 
+function userByID(userID) {
+  return docsCache?.snapshot?.workspace?.users?.find((user) => user.id === userID) || null;
+}
+
 function userRef(userID, label) {
-  return `<span data-user-id="${shellAPI.escapeHTML(userID)}">${shellAPI.escapeHTML(label)}</span>`;
+  const user = userByID(userID);
+  if (!user) {
+    return `<span data-user-id="${shellAPI.escapeHTML(userID)}">${shellAPI.escapeHTML(label)}</span>`;
+  }
+  return `<span class="user-ref-inline" data-user-id="${shellAPI.escapeHTML(user.id)}">${shellAPI.renderAvatar(user)}<span>${shellAPI.escapeHTML(user.displayName)}</span></span>`;
 }
 
 function userName(userID) {
-  return docsCache?.snapshot?.workspace?.users?.find((user) => user.id === userID)?.displayName || userID;
+  return userByID(userID)?.displayName || userID;
 }
 
 function currentPage() {
@@ -152,7 +160,7 @@ function renderPageTree(nodes, depth = 0) {
             <button class="doc-tree-item-trigger" type="button" data-page-id="${shellAPI.escapeHTML(node.id)}">
               <strong>${shellAPI.escapeHTML(node.title)}</strong>
             </button>
-            <button class="doc-tree-add" type="button" data-add-child-page-id="${shellAPI.escapeHTML(node.id)}" aria-label="Add article in this section" title="Add article">+</button>
+            <button class="doc-tree-add" type="button" data-add-child-page-id="${shellAPI.escapeHTML(node.id)}" aria-label="Add article in this section" title="Add article"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
           </div>
         </div>
         ${childCount && isExpanded ? `<div class="doc-tree-children">${renderPageTree(node.children || [], depth + 1)}</div>` : ""}
@@ -339,7 +347,7 @@ const shell = shellAPI.createShell({
     const pageSidebar = `
       <aside class="doc-sidebar">
         <div class="doc-inline-actions">
-          <button id="new-root-page" class="doc-icon-button" type="button" aria-label="New root page" title="New root page">+</button>
+          <button id="new-root-page" class="doc-icon-button" type="button" aria-label="New root page" title="New root page"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
         </div>
         <div class="doc-tree">${renderPageTree(docs.tree)}</div>
       </aside>
@@ -418,9 +426,9 @@ const shell = shellAPI.createShell({
                     <p>${escapeHTML(page ? breadcrumb : "Select a page from the left sidebar.")}</p>
                   </div>
                   <div class="doc-mode-actions">
-                    <button id="doc-preview-mode" class="doc-icon-button${docMode === "preview" ? " active" : ""}" type="button" aria-label="Preview document" title="Preview">◫</button>
-                    <button id="doc-edit-mode" class="doc-icon-button${docMode === "edit" ? " active" : ""}" type="button" aria-label="Edit document" title="Edit">✎</button>
-                    <button id="doc-history-mode" class="doc-icon-button${docMode === "history" ? " active" : ""}" type="button" aria-label="View history" title="History">↺</button>
+                    <button id="doc-preview-mode" class="doc-icon-button${docMode === "preview" ? " active" : ""}" type="button" aria-label="Preview document" title="Preview"><i class="fa-solid fa-eye" aria-hidden="true"></i></button>
+                    <button id="doc-edit-mode" class="doc-icon-button${docMode === "edit" ? " active" : ""}" type="button" aria-label="Edit document" title="Edit"><i class="fa-solid fa-pen" aria-hidden="true"></i></button>
+                    <button id="doc-history-mode" class="doc-icon-button${docMode === "history" ? " active" : ""}" type="button" aria-label="View history" title="History"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i></button>
                   </div>
                 </header>
                 ${docMode === "preview" ? `

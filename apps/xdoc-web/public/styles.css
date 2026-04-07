@@ -19,8 +19,8 @@
   align-content: start;
   padding: 12px 10px;
   border-bottom-right-radius: 24px;
-  background: #101213;
-  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.04);
+  background: #f8fafc;
+  box-shadow: inset -1px 0 0 rgba(15, 23, 42, 0.06);
 }
 
 .doc-main {
@@ -32,10 +32,7 @@
   gap: 12px;
   min-height: 100%;
   padding: 12px;
-  background:
-    radial-gradient(circle at 18% 82%, rgba(88, 255, 207, 0.12), transparent 24%),
-    radial-gradient(circle at 72% 18%, rgba(255, 119, 196, 0.12), transparent 22%),
-    linear-gradient(180deg, #1b1c20 0%, #17171c 18%, #121217 100%);
+  background: transparent;
 }
 
 .doc-document-header {
@@ -45,8 +42,8 @@
   gap: 14px;
   padding: 14px 16px;
   border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: linear-gradient(135deg, rgba(255, 131, 191, 0.18), rgba(137, 121, 255, 0.1) 44%, rgba(255, 173, 126, 0.16));
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(255, 255, 255, 0.94);
 }
 
 .doc-document-copy {
@@ -75,19 +72,26 @@
 .doc-icon-button {
   width: 34px;
   height: 34px;
+  padding: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(8, 10, 16, 0.36);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(255, 255, 255, 0.94);
   color: var(--text-1);
-  font-size: 0.95rem;
+  font-size: 0.88rem;
 }
 
 .doc-icon-button.active {
-  border-color: rgba(214, 255, 243, 0.18);
-  background: linear-gradient(135deg, rgba(255, 191, 156, 0.18), rgba(196, 238, 219, 0.14));
+  border-color: var(--accent-ring);
+  background: var(--accent-soft);
+}
+
+.doc-icon-button .fa-solid,
+.doc-tree-add .fa-solid {
+  pointer-events: none;
+  font-size: 0.78rem;
 }
 
 .doc-main-grid {
@@ -158,14 +162,12 @@
 
 .doc-tree-item:hover {
   transform: translateY(-1px);
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(15, 23, 42, 0.04);
 }
 
 .doc-tree-item.active {
-  background: linear-gradient(135deg, rgba(255, 191, 156, 0.92), rgba(196, 238, 219, 0.94));
-  box-shadow:
-    inset 0 0 0 1px rgba(214, 255, 243, 0.3),
-    0 0 18px rgba(169, 248, 222, 0.13);
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px rgba(217, 119, 6, 0.08);
 }
 
 .doc-tree-item-trigger {
@@ -192,7 +194,7 @@
 }
 
 .doc-tree-item.active strong {
-  color: rgba(62, 76, 72, 0.78);
+  color: var(--text-1);
 }
 
 .doc-tree-add {
@@ -202,11 +204,11 @@
   align-items: center;
   justify-content: center;
   padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(15, 23, 42, 0.1);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.94);
   color: var(--text-1);
-  font-size: 1rem;
+  font-size: 0.88rem;
   line-height: 1;
   opacity: 0;
   pointer-events: none;
@@ -220,13 +222,13 @@
 }
 
 .doc-tree-add:hover {
-  border-color: rgba(214, 255, 243, 0.18);
-  background: linear-gradient(135deg, rgba(255, 191, 156, 0.18), rgba(196, 238, 219, 0.14));
+  border-color: var(--accent-ring);
+  background: var(--accent-soft);
 }
 
 .doc-tree-item.active .doc-tree-add {
-  background: rgba(8, 10, 16, 0.52);
-  border-color: rgba(25, 29, 34, 0.9);
+  background: rgba(255, 255, 255, 0.96);
+  border-color: rgba(15, 23, 42, 0.12);
   color: var(--text-1);
 }
 
@@ -234,9 +236,9 @@
 .doc-preview-body,
 .doc-metadata,
 .doc-revision-table {
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: 16px;
-  background: linear-gradient(180deg, rgba(16, 18, 19, 0.96), rgba(18, 21, 24, 0.94));
+  background: rgba(255, 255, 255, 0.92);
 }
 
 .doc-field {
@@ -258,9 +260,9 @@
 .doc-field select,
 .doc-field textarea {
   width: 100%;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.96);
   color: var(--text-1);
   padding: 9px 10px;
   font: inherit;
@@ -304,7 +306,7 @@
 .doc-preview-body code {
   padding: 1px 5px;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(15, 23, 42, 0.06);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.85em;
 }
@@ -313,7 +315,7 @@
   overflow: auto;
   padding: 10px 12px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.035);
+  background: rgba(15, 23, 42, 0.04);
 }
 
 .doc-editor {

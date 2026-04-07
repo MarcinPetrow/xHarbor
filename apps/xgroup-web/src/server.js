@@ -10,13 +10,17 @@ const tagBaseURL = new URL("http://127.0.0.1:8085");
 const publicRoot = fileURLToPath(new URL("../public/", import.meta.url));
 const sharedPublicRoot = fileURLToPath(new URL("../../_shared-web/public/", import.meta.url));
 const logoPath = fileURLToPath(new URL("../../../go_home.png", import.meta.url));
+const appIconPath = fileURLToPath(new URL("../../../image.png", import.meta.url));
+const fontAwesomeRoot = fileURLToPath(new URL("../../../node_modules/@fortawesome/fontawesome-free/", import.meta.url));
 
 const contentTypes = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".js": "application/javascript; charset=utf-8",
   ".png": "image/png",
-  ".svg": "image/svg+xml"
+  ".svg": "image/svg+xml",
+  ".woff": "font/woff",
+  ".woff2": "font/woff2"
 };
 
 function sendNotFound(response) {
@@ -54,8 +58,16 @@ async function serveStatic(pathname, response) {
     return serveFromRoot("/", logoPath, response);
   }
 
+  if (target === "/shared/app-icon.png") {
+    return serveFromRoot("/", appIconPath, response);
+  }
+
   if (target === "/shared/platform-mark.svg") {
     return serveFromRoot(sharedPublicRoot, "/platform-mark.svg", response);
+  }
+
+  if (target.startsWith("/shared/fontawesome/")) {
+    return serveFromRoot(fontAwesomeRoot, target.replace("/shared/fontawesome/", "/"), response);
   }
 
   if (target.startsWith("/shared/")) {

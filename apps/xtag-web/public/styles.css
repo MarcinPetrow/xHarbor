@@ -10,8 +10,8 @@
   height: 40px;
   padding: 0 14px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(255, 255, 255, 0.96);
   color: var(--text-1);
 }
 
@@ -29,8 +29,8 @@
   gap: 8px;
   padding: 7px 12px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(255, 255, 255, 0.94);
   color: var(--text-1);
 }
 
@@ -39,9 +39,9 @@
 }
 
 .tag-chip.active {
-  border-color: rgba(255, 191, 156, 0.28);
-  background: linear-gradient(135deg, rgba(255, 191, 156, 0.92), rgba(196, 238, 219, 0.94));
-  color: rgba(52, 60, 58, 0.92);
+  border-color: var(--accent-ring);
+  background: var(--accent-soft);
+  color: var(--text-1);
 }
 
 .tag-chip.small {

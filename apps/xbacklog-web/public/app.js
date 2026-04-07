@@ -97,7 +97,7 @@ function rowItem(title, subtitle, meta = "", options = {}) {
 
 function userRef(user, fallback = "Unknown user") {
   if (!user) return shellAPI.escapeHTML(fallback);
-  return `<span data-user-id="${shellAPI.escapeHTML(user.id)}">${shellAPI.escapeHTML(user.displayName)}</span>`;
+  return `<span class="user-ref-inline" data-user-id="${shellAPI.escapeHTML(user.id)}">${shellAPI.renderAvatar(user)}<span>${shellAPI.escapeHTML(user.displayName)}</span></span>`;
 }
 
 function taskCard(task, projectName, assignee, active) {

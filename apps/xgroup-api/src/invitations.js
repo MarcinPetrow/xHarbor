@@ -52,6 +52,7 @@ export function resolveProvisionedUser(state, invitation, acceptedDisplayName) {
     department: "",
     title: "",
     managerUserID: null,
+    avatarDataURL: null,
     email: invitation.email,
     status: "active"
   };

@@ -1,11 +1,12 @@
 (function initShellModule() {
   const preferenceKey = "xharbor_ui";
   const accents = {
-    amber: { label: "Amber Grid", accent: "#ff9a49", strong: "#ff7b32", soft: "rgba(255, 154, 73, 0.14)", ring: "rgba(255, 154, 73, 0.28)" },
-    cyan: { label: "Cyan Pulse", accent: "#53d8ff", strong: "#318bff", soft: "rgba(83, 216, 255, 0.14)", ring: "rgba(83, 216, 255, 0.28)" },
-    rose: { label: "Rose Signal", accent: "#ff6f91", strong: "#ff8a54", soft: "rgba(255, 111, 145, 0.14)", ring: "rgba(255, 111, 145, 0.28)" },
-    emerald: { label: "Emerald Core", accent: "#45db84", strong: "#22b86f", soft: "rgba(69, 219, 132, 0.14)", ring: "rgba(69, 219, 132, 0.28)" },
-    indigo: { label: "Indigo Flux", accent: "#7f7bff", strong: "#429cff", soft: "rgba(127, 123, 255, 0.14)", ring: "rgba(127, 123, 255, 0.28)" }
+    amber: { label: "Amber", accent: "#d97706", strong: "#b45309", soft: "rgba(217, 119, 6, 0.12)", ring: "rgba(217, 119, 6, 0.2)" },
+    crimson: { label: "Crimson", accent: "#dc2626", strong: "#b91c1c", soft: "rgba(220, 38, 38, 0.12)", ring: "rgba(220, 38, 38, 0.2)" },
+    cobalt: { label: "Cobalt", accent: "#2563eb", strong: "#1d4ed8", soft: "rgba(37, 99, 235, 0.12)", ring: "rgba(37, 99, 235, 0.2)" },
+    violet: { label: "Violet", accent: "#7c3aed", strong: "#6d28d9", soft: "rgba(124, 58, 237, 0.12)", ring: "rgba(124, 58, 237, 0.2)" },
+    teal: { label: "Teal", accent: "#0f766e", strong: "#115e59", soft: "rgba(15, 118, 110, 0.12)", ring: "rgba(15, 118, 110, 0.2)" },
+    magenta: { label: "Magenta", accent: "#db2777", strong: "#be185d", soft: "rgba(219, 39, 119, 0.12)", ring: "rgba(219, 39, 119, 0.2)" }
   };
 
   const timezones = [
@@ -53,6 +54,69 @@
 
     html += escapeHTML(input.slice(cursor));
     return html;
+  }
+
+  const avatarPalettes = [
+    { bg: "#dbeafe", fg: "#1d4ed8" },
+    { bg: "#ede9fe", fg: "#6d28d9" },
+    { bg: "#fae8ff", fg: "#a21caf" },
+    { bg: "#ccfbf1", fg: "#0f766e" },
+    { bg: "#dcfce7", fg: "#166534" },
+    { bg: "#fee2e2", fg: "#b91c1c" }
+  ];
+
+  function hashString(value) {
+    return [...String(value || "xharbor")].reduce((hash, character) => ((hash << 5) - hash + character.charCodeAt(0)) | 0, 0);
+  }
+
+  function avatarColors(entity) {
+    const display = typeof entity === "string"
+      ? entity
+      : entity?.id || entity?.email || entity?.displayName || `${entity?.firstName || ""}${entity?.lastName || ""}`;
+    const palette = avatarPalettes[Math.abs(hashString(display)) % avatarPalettes.length];
+    return palette;
+  }
+
+  function avatarLabel(entity) {
+    if (typeof entity === "string") return entity;
+    return [entity?.firstName, entity?.lastName].filter(Boolean).join(" ").trim()
+      || entity?.displayName
+      || entity?.email
+      || entity?.id
+      || "?";
+  }
+
+  function avatarInitials(entity) {
+    const label = avatarLabel(entity);
+    const parts = label.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    return label.slice(0, 2).toUpperCase();
+  }
+
+  function renderAvatar(entity, className = "") {
+    const label = avatarLabel(entity);
+    const colors = avatarColors(entity);
+    const classes = ["user-avatar", className].filter(Boolean).join(" ");
+    const userAttribute = entity?.id ? ` data-user-id="${escapeHTML(entity.id)}"` : "";
+    const style = `--avatar-bg:${colors.bg};--avatar-fg:${colors.fg};`;
+
+    if (entity?.avatarDataURL) {
+      return `<span class="${classes}" style="${style}"${userAttribute}><img src="${escapeHTML(entity.avatarDataURL)}" alt="${escapeHTML(label)}"></span>`;
+    }
+
+    return `<span class="${classes}" style="${style}"${userAttribute}><span class="user-avatar-fallback">${escapeHTML(avatarInitials(entity))}</span></span>`;
+  }
+
+  function ensureFontAwesome() {
+    if (document.getElementById("fontawesome-stylesheet")) {
+      return;
+    }
+
+    const link = document.createElement("link");
+    link.id = "fontawesome-stylesheet";
+    link.rel = "stylesheet";
+    link.href = "/shared/fontawesome/css/all.min.css";
+    document.head.append(link);
   }
 
   async function requestTagSuggestions(query = "") {
@@ -230,14 +294,14 @@
   function readPreferences() {
     try {
       const raw = readCookie(preferenceKey);
-      if (!raw) return { accent: "amber", timezone: "system" };
+      if (!raw) return { accent: "cobalt", timezone: "system" };
       const parsed = JSON.parse(raw);
       return {
-        accent: accents[parsed.accent] ? parsed.accent : "amber",
+        accent: accents[parsed.accent] ? parsed.accent : "cobalt",
         timezone: timezones.some((item) => item.value === parsed.timezone) ? parsed.timezone : "system"
       };
     } catch {
-      return { accent: "amber", timezone: "system" };
+      return { accent: "cobalt", timezone: "system" };
     }
   }
 
@@ -246,7 +310,7 @@
   }
 
   function applyPreferences(preferences) {
-    const palette = accents[preferences.accent] ?? accents.amber;
+    const palette = accents[preferences.accent] ?? accents.cobalt;
     document.documentElement.style.setProperty("--accent-name", preferences.accent);
     document.documentElement.style.setProperty("--accent", palette.accent);
     document.documentElement.style.setProperty("--accent-strong", palette.strong);
@@ -344,12 +408,13 @@
     };
 
     applyPreferences(state.preferences);
+    ensureFontAwesome();
 
     root.innerHTML = `
       <div class="shell-root${config.shellClassName ? ` ${escapeHTML(config.shellClassName)}` : ""}">
         <header class="shell-topbar">
           <div class="topbar-brand">
-            <img class="brand-mark" src="/shared/platform-mark.svg" alt="" aria-hidden="true">
+            <img class="brand-mark" src="/shared/app-icon.png" alt="" aria-hidden="true">
             <div class="brand-copy">
               <p class="brand-title">xHarbor:${escapeHTML(config.appName)}</p>
               <p class="brand-subtitle">${escapeHTML(config.appSubtitle)}</p>
@@ -357,6 +422,7 @@
           </div>
 
           <div class="topbar-actions">
+            <div id="accent-picker" class="accent-picker" aria-label="Accent palette"></div>
             <div id="signed-out-auth" class="auth-inline">
               <select id="login-select" class="shell-select"></select>
               <button id="login-button" class="shell-button" type="button">Sign in</button>
@@ -365,7 +431,7 @@
             <div id="signed-in-auth" class="user-menu-anchor">
               <button id="user-menu-button" class="user-menu-button" type="button">
                 <span id="user-menu-name"></span>
-                <span class="user-menu-chevron">▾</span>
+                <span class="user-menu-chevron"><i class="fa-solid fa-chevron-down" aria-hidden="true"></i></span>
               </button>
               <div id="user-menu" class="user-menu">
                 <div id="user-menu-summary" class="user-menu-summary"></div>
@@ -413,6 +479,7 @@
       loginButton: document.getElementById("login-button"),
       signedOutAuth: document.getElementById("signed-out-auth"),
       signedInAuth: document.getElementById("signed-in-auth"),
+      accentPicker: document.getElementById("accent-picker"),
       userMenuButton: document.getElementById("user-menu-button"),
       userMenu: document.getElementById("user-menu"),
       userMenuName: document.getElementById("user-menu-name"),
@@ -449,6 +516,31 @@
         : "";
 
       refs.nav.style.display = items.length > 1 ? "flex" : "none";
+    }
+
+    function updateAccentPicker() {
+      refs.accentPicker.innerHTML = Object.entries(accents).map(([value, accent]) => `
+        <button
+          class="accent-swatch${value === state.preferences.accent ? " active" : ""}"
+          type="button"
+          data-accent-value="${value}"
+          aria-label="${escapeHTML(accent.label)}"
+          title="${escapeHTML(accent.label)}"
+          style="--swatch:${accent.accent};"
+        ></button>
+      `).join("");
+
+      refs.accentPicker.querySelectorAll("[data-accent-value]").forEach((button) => {
+        button.addEventListener("click", async () => {
+          state.preferences.accent = button.dataset.accentValue;
+          writePreferences(state.preferences);
+          applyPreferences(state.preferences);
+          updateAccentPicker();
+          if (state.currentView === "settings") {
+            await renderView();
+          }
+        });
+      });
     }
 
     function updateUserMenu() {
@@ -597,6 +689,7 @@
 
     async function renderView() {
       updateNav();
+      updateAccentPicker();
       updateUserMenu();
 
       if (state.currentView === "settings") {
@@ -754,6 +847,8 @@
     normalizeTag,
     buildTagSearchURL,
     renderTagText,
+    renderAvatar,
+    avatarInitials,
     attachTagAutocomplete,
     createShell,
     formatDateTime,

@@ -47,6 +47,7 @@ export function createDemoWorkspace() {
           department: "Platform",
           title: "Head of Engineering",
           managerUserID: null,
+          avatarDataURL: null,
           email: "marcin@xharbor.dev",
           status: "active"
         },
@@ -59,6 +60,7 @@ export function createDemoWorkspace() {
           department: "Product Delivery",
           title: "Delivery Lead",
           managerUserID: "user-marcin",
+          avatarDataURL: null,
           email: "anna@xharbor.dev",
           status: "active"
         },
@@ -71,6 +73,7 @@ export function createDemoWorkspace() {
           department: "Messaging Clients",
           title: "Mobile Engineer",
           managerUserID: "user-anna",
+          avatarDataURL: null,
           email: "ola@xharbor.dev",
           status: "active"
         }

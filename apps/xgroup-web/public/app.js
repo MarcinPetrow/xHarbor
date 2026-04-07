@@ -58,7 +58,7 @@ function managerOptions(users, selectedValue = "") {
 
 function userRef(user, fallback = "Unknown user") {
   if (!user) return shellAPI.escapeHTML(fallback);
-  return `<span data-user-id="${shellAPI.escapeHTML(user.id)}">${shellAPI.escapeHTML(user.displayName)}</span>`;
+  return `<span class="user-ref-inline" data-user-id="${shellAPI.escapeHTML(user.id)}">${renderUserAvatar(user)}<span>${shellAPI.escapeHTML(user.displayName)}</span></span>`;
 }
 
 function userFullName(user) {
@@ -66,11 +66,23 @@ function userFullName(user) {
   return parts.length ? parts.join(" ") : user?.displayName || "Unknown user";
 }
 
-function userInitials(user) {
-  const parts = [user?.firstName, user?.lastName].filter((value) => value && String(value).trim());
-  if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (user?.displayName || "?").slice(0, 2).toUpperCase();
+function renderUserAvatar(user, className = "") {
+  return shellAPI.renderAvatar(user, className);
+}
+
+function readFileAsDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error || new Error("Could not read image file."));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function selectedAvatarDataURL(inputID) {
+  const file = document.getElementById(inputID)?.files?.[0];
+  if (!file) return undefined;
+  return readFileAsDataURL(file);
 }
 
 function userTeamSummary(snapshot, userID) {
@@ -142,9 +154,9 @@ function renderOrgTree(snapshot, nodes, collapsedNodes, depth = 0) {
           <div class="org-branch-node">
             <article class="org-card" data-action="select-org-user" data-user-id="${shellAPI.escapeHTML(user.id)}">
         ${user.children?.length
-          ? `<button class="org-toggle" type="button" data-action="toggle-org-node" data-user-id="${shellAPI.escapeHTML(user.id)}" aria-expanded="${collapsedNodes.has(user.id) ? "false" : "true"}">${collapsedNodes.has(user.id) ? "+" : "−"}</button>`
+          ? `<button class="org-toggle" type="button" data-action="toggle-org-node" data-user-id="${shellAPI.escapeHTML(user.id)}" aria-expanded="${collapsedNodes.has(user.id) ? "false" : "true"}"><i class="fa-solid ${collapsedNodes.has(user.id) ? "fa-plus" : "fa-minus"}" aria-hidden="true"></i></button>`
           : `<span class="org-toggle org-toggle-placeholder" aria-hidden="true"></span>`}
-        <div class="org-avatar" data-user-id="${shellAPI.escapeHTML(user.id)}">${shellAPI.escapeHTML(userInitials(user))}</div>
+        ${renderUserAvatar(user, "org-avatar")}
         <div class="org-card-main">
           <strong data-user-id="${shellAPI.escapeHTML(user.id)}">${shellAPI.escapeHTML(userFullName(user))}</strong>
           <span class="org-card-sub">${shellAPI.escapeHTML(user.title || "No title")}</span>
@@ -503,6 +515,7 @@ const shell = shellAPI.createShell({
               <input id="user-email" class="shell-input" type="email" placeholder="Email" required>
               <input id="user-department" class="shell-input" placeholder="Department">
               <input id="user-title" class="shell-input" placeholder="Role / title">
+              <input id="user-avatar" class="shell-input" type="file" accept="image/*">
               <select id="user-manager" class="shell-select">${managerOptions(snapshot.users)}</select>
               <select id="user-team" class="shell-select">${optionMarkup(snapshot.teams, (team) => team.id, (team) => team.name)}</select>
               <select id="user-status" class="shell-select">
@@ -533,6 +546,7 @@ const shell = shellAPI.createShell({
               <input id="user-edit-email" class="shell-input" type="email" value="${escapeHTML(selectedUser.email)}" required>
               <input id="user-edit-department" class="shell-input" value="${escapeHTML(selectedUser.department || "")}" placeholder="Department">
               <input id="user-edit-title" class="shell-input" value="${escapeHTML(selectedUser.title || "")}" placeholder="Role / title">
+              <input id="user-edit-avatar" class="shell-input" type="file" accept="image/*">
               <select id="user-edit-manager" class="shell-select">${managerOptions(snapshot.users.filter((user) => user.id !== selectedUser.id), selectedUser.managerUserID || "")}</select>
               <select id="user-edit-status" class="shell-select">
                 <option value="active"${selectedUser.status === "active" ? " selected" : ""}>active</option>
@@ -566,6 +580,7 @@ const shell = shellAPI.createShell({
 
       document.getElementById("user-create-form")?.addEventListener("submit", async (event) => {
         event.preventDefault();
+        const avatarDataURL = await selectedAvatarDataURL("user-avatar");
         await requestJSON("/api/users", {
           method: "POST",
           body: JSON.stringify({
@@ -575,6 +590,7 @@ const shell = shellAPI.createShell({
             email: document.getElementById("user-email").value,
             department: document.getElementById("user-department").value,
             title: document.getElementById("user-title").value,
+            avatarDataURL,
             managerUserID: document.getElementById("user-manager").value || null,
             teamID: document.getElementById("user-team").value,
             status: document.getElementById("user-status").value,
@@ -599,18 +615,23 @@ const shell = shellAPI.createShell({
 
       document.getElementById("user-edit-form")?.addEventListener("submit", async (event) => {
         event.preventDefault();
+        const avatarDataURL = await selectedAvatarDataURL("user-edit-avatar");
+        const payload = {
+          firstName: document.getElementById("user-edit-first-name").value,
+          lastName: document.getElementById("user-edit-last-name").value,
+          nickname: document.getElementById("user-edit-nickname").value,
+          email: document.getElementById("user-edit-email").value,
+          department: document.getElementById("user-edit-department").value,
+          title: document.getElementById("user-edit-title").value,
+          managerUserID: document.getElementById("user-edit-manager").value || null,
+          status: document.getElementById("user-edit-status").value
+        };
+        if (avatarDataURL !== undefined) {
+          payload.avatarDataURL = avatarDataURL;
+        }
         await requestJSON(`/api/users/${document.getElementById("user-edit-id").value}`, {
           method: "PATCH",
-          body: JSON.stringify({
-            firstName: document.getElementById("user-edit-first-name").value,
-            lastName: document.getElementById("user-edit-last-name").value,
-            nickname: document.getElementById("user-edit-nickname").value,
-            email: document.getElementById("user-edit-email").value,
-            department: document.getElementById("user-edit-department").value,
-            title: document.getElementById("user-edit-title").value,
-            managerUserID: document.getElementById("user-edit-manager").value || null,
-            status: document.getElementById("user-edit-status").value
-          })
+          body: JSON.stringify(payload)
         });
         await refresh();
       });

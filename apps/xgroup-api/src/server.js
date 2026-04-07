@@ -80,6 +80,17 @@ function computeDisplayName(payload) {
   return fullName || payload.nickname || payload.email || "Unknown User";
 }
 
+function normalizeAvatarDataURL(value) {
+  if (value == null || value === "") return null;
+  if (typeof value !== "string" || !/^data:image\/(?:png|jpeg|jpg|gif|webp);base64,/i.test(value)) {
+    throw new Error("Avatar must be a data URL for an image file.");
+  }
+  if (value.length > 2_500_000) {
+    throw new Error("Avatar image is too large.");
+  }
+  return value;
+}
+
 async function listPresence() {
   const sessions = await sessionStore.listSessions();
   const sessionsByUserID = new Map();
@@ -264,6 +275,12 @@ const server = http.createServer(async (request, response) => {
       if (payload.managerUserID && !state.snapshot.users.some((item) => item.id === payload.managerUserID)) {
         return text(response, 400, `Unknown manager: ${payload.managerUserID}`);
       }
+      let avatarDataURL;
+      try {
+        avatarDataURL = normalizeAvatarDataURL(payload.avatarDataURL);
+      } catch (error) {
+        return text(response, 400, error.message);
+      }
       const user = {
         id: `user-${slugify(computeDisplayName(payload))}`,
         displayName: computeDisplayName(payload),
@@ -273,6 +290,7 @@ const server = http.createServer(async (request, response) => {
         department: payload.department || "",
         title: payload.title || "",
         managerUserID: payload.managerUserID || null,
+        avatarDataURL,
         email: payload.email,
         status: payload.status
       };
@@ -406,6 +424,13 @@ const server = http.createServer(async (request, response) => {
       user.managerUserID = payload.managerUserID || null;
       user.displayName = computeDisplayName(payload);
       user.email = payload.email;
+      if (Object.hasOwn(payload, "avatarDataURL")) {
+        try {
+          user.avatarDataURL = normalizeAvatarDataURL(payload.avatarDataURL);
+        } catch (error) {
+          return text(response, 400, error.message);
+        }
+      }
       if (payload.status) {
         assertKnownUserStatus(payload.status);
         user.status = payload.status;

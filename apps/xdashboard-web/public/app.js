@@ -60,8 +60,9 @@ function rowItem(title, subtitle, meta = "") {
   `;
 }
 
-function userRef(userID, label) {
-  return `<span data-user-id="${shellAPI.escapeHTML(userID)}">${shellAPI.escapeHTML(label)}</span>`;
+function userRef(user, fallback = "Unknown user") {
+  if (!user) return shellAPI.escapeHTML(fallback);
+  return `<span class="user-ref-inline" data-user-id="${shellAPI.escapeHTML(user.id)}">${shellAPI.renderAvatar(user)}<span>${shellAPI.escapeHTML(user.displayName)}</span></span>`;
 }
 
 function denseTable(headers, rows) {
@@ -249,7 +250,7 @@ const shell = shellAPI.createShell({
           html: denseTable(
             ["User", "Assignments", "Done"],
             dashboard.userCards.map((user) => [
-              userRef(user.id, user.displayName),
+              userRef(user),
               escapeHTML(`${user.roles.join(", ") || "no team role"} · ${user.assignedTaskCount} assigned`),
               escapeHTML(`${user.completedTaskCount}`)
             ])
@@ -271,7 +272,7 @@ const shell = shellAPI.createShell({
             ? denseTable(
                 ["Comment", "Body", "When"],
                 dashboard.recentComments.map((comment) => [
-                  `${comment.authorUserID ? userRef(comment.authorUserID, comment.authorName) : escapeHTML(comment.authorName)} on ${escapeHTML(comment.taskTitle)}`,
+                  `${comment.authorUserID ? userRef({ id: comment.authorUserID, displayName: comment.authorName }) : escapeHTML(comment.authorName)} on ${escapeHTML(comment.taskTitle)}`,
                   escapeHTML(comment.body),
                   escapeHTML(formatDateTime(comment.createdAt))
                 ])

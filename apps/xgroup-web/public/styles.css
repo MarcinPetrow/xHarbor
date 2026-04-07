@@ -5,10 +5,10 @@
 
 .dense-table {
   display: grid;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: 16px;
   overflow: hidden;
-  background: linear-gradient(180deg, rgba(16, 18, 19, 0.96), rgba(18, 21, 24, 0.94));
+  background: rgba(255, 255, 255, 0.92);
 }
 
 .dense-row {
@@ -16,8 +16,8 @@
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 10px;
   padding: 9px 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-  background: rgba(255, 255, 255, 0.015);
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
+  background: rgba(255, 255, 255, 0.88);
 }
 
 .dense-row:first-child {
@@ -25,7 +25,7 @@
 }
 
 .dense-head {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(15, 23, 42, 0.03);
 }
 
 .dense-head .dense-cell {
@@ -73,8 +73,8 @@
   gap: 12px;
   padding: 12px 14px;
   border-radius: 16px;
-  background: linear-gradient(180deg, rgba(16, 18, 19, 0.96), rgba(18, 21, 24, 0.94));
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(15, 23, 42, 0.08);
 }
 
 .event-row strong {
@@ -137,8 +137,8 @@
   gap: 6px;
   padding: 4px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(255, 255, 255, 0.94);
 }
 
 .org-layout-button {
@@ -287,31 +287,37 @@
   gap: 12px;
   padding: 12px 14px;
   border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background: linear-gradient(180deg, rgba(16, 18, 19, 0.96), rgba(18, 21, 24, 0.94));
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(255, 255, 255, 0.94);
   cursor: pointer;
   transition: border-color 140ms ease, box-shadow 140ms ease, background 140ms ease;
 }
 
 .org-branch-selected > .org-branch-node .org-card {
   border-color: var(--accent-ring);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.02), 0 0 0 3px var(--accent-soft);
-  background: linear-gradient(180deg, rgba(20, 24, 26, 0.98), rgba(24, 28, 31, 0.96));
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  background: rgba(255, 248, 238, 0.96);
 }
 
 .org-toggle {
   width: 28px;
   height: 28px;
-  display: inline-grid;
-  place-items: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  background: rgba(255, 255, 255, 0.94);
   color: var(--text-2);
-  font-size: 1rem;
+  font-size: 0.88rem;
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
+}
+
+.org-toggle .fa-solid {
+  pointer-events: none;
+  font-size: 0.78rem;
 }
 
 .org-toggle-placeholder {
@@ -320,17 +326,18 @@
 }
 
 .org-avatar {
+  --avatar-size: 34px;
   width: 34px;
   height: 34px;
   display: grid;
   place-items: center;
   border-radius: 999px;
-  background: linear-gradient(135deg, rgba(255, 188, 145, 0.95), rgba(192, 142, 255, 0.86));
-  color: rgba(20, 14, 22, 0.9);
+  background: var(--avatar-bg, rgba(51, 65, 85, 0.12));
+  color: var(--avatar-fg, #334155);
   font-size: 0.78rem;
   font-weight: 800;
   letter-spacing: 0.02em;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  box-shadow: inset 0 0 0 1px rgba(51, 65, 85, 0.12);
 }
 
 .org-card-main {
