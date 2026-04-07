@@ -384,6 +384,7 @@ const shell = shellAPI.createShell({
           selectedPageID = button.dataset.pageId;
           docMode = "preview";
           ensureExpandedPath(selectedPageID);
+          syncDocLocation(selectedPageID, docMode);
           await refresh();
         });
       });
@@ -416,6 +417,7 @@ const shell = shellAPI.createShell({
           docMode = "preview";
           ensureExpandedPath(selectedPageID);
           expandedPageIDs.add(parentPageID);
+          syncDocLocation(selectedPageID, docMode);
           await refresh();
         });
       });
@@ -430,6 +432,7 @@ const shell = shellAPI.createShell({
         selectedPageID = created.id;
         docMode = "preview";
         ensureExpandedPath(selectedPageID);
+        syncDocLocation(selectedPageID, docMode);
         await refresh();
       });
     }
@@ -445,19 +448,14 @@ const shell = shellAPI.createShell({
             ${pageSidebar}
             <section class="doc-main">
               <div class="doc-document">
-                <div class="doc-toolbar">
-                  <div class="doc-toolbar-copy">
-                    <span class="doc-breadcrumb">${escapeHTML(breadcrumbLabel)}</span>
-                  </div>
-                  <div class="doc-mode-actions">
-                    <button id="doc-preview-mode" class="doc-icon-button${docMode === "preview" ? " active" : ""}" type="button" aria-label="Preview document" title="Preview"><i class="fa-solid fa-eye" aria-hidden="true"></i></button>
-                    <button id="doc-edit-mode" class="doc-icon-button${docMode === "edit" ? " active" : ""}" type="button" aria-label="Edit document" title="Edit"><i class="fa-solid fa-pen" aria-hidden="true"></i></button>
-                    <button id="doc-history-mode" class="doc-icon-button${docMode === "history" ? " active" : ""}" type="button" aria-label="View history" title="History"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i></button>
-                  </div>
-                </div>
                 ${docMode === "preview" ? `
                   <div class="doc-main-grid">
                     <article class="doc-preview-body">
+                      <div class="doc-mode-actions doc-mode-actions-floating">
+                        <button id="doc-preview-mode" class="doc-icon-button${docMode === "preview" ? " active" : ""}" type="button" aria-label="Preview document" title="Preview"><i class="fa-solid fa-eye" aria-hidden="true"></i></button>
+                        <button id="doc-edit-mode" class="doc-icon-button${docMode === "edit" ? " active" : ""}" type="button" aria-label="Edit document" title="Edit"><i class="fa-solid fa-pen" aria-hidden="true"></i></button>
+                        <button id="doc-history-mode" class="doc-icon-button${docMode === "history" ? " active" : ""}" type="button" aria-label="View history" title="History"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i></button>
+                      </div>
                       ${page ? `
                         <div class="doc-page-heading">
                           <h1>${escapeHTML(page.title)}</h1>
@@ -482,6 +480,11 @@ const shell = shellAPI.createShell({
                     <div class="doc-editor">
                       ${page ? `
                         <form id="page-editor" class="doc-field">
+                          <div class="doc-mode-actions doc-mode-actions-floating">
+                            <button id="doc-preview-mode" class="doc-icon-button${docMode === "preview" ? " active" : ""}" type="button" aria-label="Preview document" title="Preview"><i class="fa-solid fa-eye" aria-hidden="true"></i></button>
+                            <button id="doc-edit-mode" class="doc-icon-button${docMode === "edit" ? " active" : ""}" type="button" aria-label="Edit document" title="Edit"><i class="fa-solid fa-pen" aria-hidden="true"></i></button>
+                            <button id="doc-history-mode" class="doc-icon-button${docMode === "history" ? " active" : ""}" type="button" aria-label="View history" title="History"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i></button>
+                          </div>
                           <label>Title
                             <input id="page-title" name="title" type="text" value="${escapeHTML(page.title)}" required>
                           </label>
@@ -518,6 +521,11 @@ const shell = shellAPI.createShell({
                   <div class="doc-main-grid">
                     <article class="doc-revision-table">
                       ${page ? `
+                        <div class="doc-mode-actions doc-mode-actions-floating">
+                          <button id="doc-preview-mode" class="doc-icon-button${docMode === "preview" ? " active" : ""}" type="button" aria-label="Preview document" title="Preview"><i class="fa-solid fa-eye" aria-hidden="true"></i></button>
+                          <button id="doc-edit-mode" class="doc-icon-button${docMode === "edit" ? " active" : ""}" type="button" aria-label="Edit document" title="Edit"><i class="fa-solid fa-pen" aria-hidden="true"></i></button>
+                          <button id="doc-history-mode" class="doc-icon-button${docMode === "history" ? " active" : ""}" type="button" aria-label="View history" title="History"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i></button>
+                        </div>
                         ${revisionTable(pageRevisions, formatDateTime)}
                       ` : renderEmpty("No page selected", "Select a page to inspect its revision history.")}
                     </article>
@@ -544,16 +552,19 @@ const shell = shellAPI.createShell({
 
     document.getElementById("doc-preview-mode")?.addEventListener("click", async () => {
       docMode = "preview";
+      syncDocLocation(selectedPageID, docMode);
       await refresh();
     });
 
     document.getElementById("doc-edit-mode")?.addEventListener("click", async () => {
       docMode = "edit";
+      syncDocLocation(selectedPageID, docMode);
       await refresh();
     });
 
     document.getElementById("doc-history-mode")?.addEventListener("click", async () => {
       docMode = "history";
+      syncDocLocation(selectedPageID, docMode);
       await refresh();
     });
 

@@ -14,6 +14,8 @@
   --line: rgba(15, 23, 42, 0.1);
   --line-strong: rgba(15, 23, 42, 0.16);
   --shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+  --avatar-size-base: 32px;
+  --avatar-size-inline: 32px;
   color-scheme: light;
 }
 
@@ -422,7 +424,7 @@ select {
 }
 
 .user-avatar {
-  --avatar-size: 32px;
+  --avatar-size: var(--avatar-size-base);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -433,6 +435,9 @@ select {
   flex: 0 0 auto;
   background: var(--avatar-bg);
   color: var(--avatar-fg);
+  font-size: 0.7rem;
+  font-weight: 800;
+  box-shadow: inset 0 0 0 1px rgba(51, 65, 85, 0.12);
 }
 
 .user-avatar img {
@@ -457,7 +462,7 @@ select {
 }
 
 .user-ref-inline .user-avatar {
-  --avatar-size: 24px;
+  --avatar-size: var(--avatar-size-inline);
 }
 
 .brand-copy {

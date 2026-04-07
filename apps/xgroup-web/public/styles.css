@@ -326,9 +326,9 @@
 }
 
 .org-avatar {
-  --avatar-size: 34px;
-  width: 34px;
-  height: 34px;
+  --avatar-size: var(--avatar-size-base);
+  width: var(--avatar-size);
+  height: var(--avatar-size);
   display: grid;
   place-items: center;
   border-radius: 999px;

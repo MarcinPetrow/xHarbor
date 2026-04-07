@@ -613,6 +613,7 @@ shell = shellAPI.createShell({
     document.querySelectorAll("[data-thread-id]").forEach((node) => {
       node.addEventListener("click", async () => {
         selectedThread = { kind: node.dataset.threadKind, id: node.dataset.threadId };
+        syncThreadLocation(selectedThread);
         forceScrollToBottom = true;
         chatStickToBottom = true;
         await refresh();
@@ -637,6 +638,7 @@ shell = shellAPI.createShell({
         })
       });
       selectedThread = { kind: "room", id: room.id };
+      syncThreadLocation(selectedThread);
       await refresh();
     });
 
@@ -647,6 +649,7 @@ shell = shellAPI.createShell({
         body: JSON.stringify({ participantUserID: document.getElementById("dm-user").value })
       });
       selectedThread = { kind: "direct", id: conversation.id };
+      syncThreadLocation(selectedThread);
       await refresh();
     });
 

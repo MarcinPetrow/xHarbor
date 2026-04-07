@@ -104,7 +104,7 @@
 }
 
 .chat-thread-avatar {
-  --avatar-size: 32px;
+  --avatar-size: var(--avatar-size-base);
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -252,7 +252,7 @@
 }
 
 .chat-message-avatar {
-  --avatar-size: 32px;
+  --avatar-size: var(--avatar-size-base);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -410,7 +410,7 @@
 }
 
 .chat-member-avatar {
-  --avatar-size: 28px;
+  --avatar-size: var(--avatar-size-inline);
   display: inline-flex;
   width: var(--avatar-size);
   height: var(--avatar-size);
