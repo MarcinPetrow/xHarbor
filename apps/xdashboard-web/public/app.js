@@ -1,6 +1,7 @@
 const shellAPI = window.XHarborShell;
 const requestJSON = shellAPI.requestJSON;
 const rowItem = shellAPI.rowItem;
+const dataTable = shellAPI.dataTable;
 
 async function fetchDashboard() {
   return requestJSON("/api/dashboard", { headers: {} });
@@ -15,21 +16,6 @@ async function refreshSources() {
 
 function userRef(user, fallback = "Unknown user") {
   return shellAPI.renderUserRef(user, fallback);
-}
-
-function denseTable(headers, rows) {
-  return `
-    <div class="dash-table">
-      <div class="dash-row dash-head">
-        ${headers.map((header) => `<span class="dash-cell">${shellAPI.escapeHTML(header)}</span>`).join("")}
-      </div>
-      ${rows.map((row) => `
-        <div class="dash-row">
-          ${row.map((cell) => `<span class="dash-cell">${cell}</span>`).join("")}
-        </div>
-      `).join("")}
-    </div>
-  `;
 }
 
 const shell = shellAPI.createShell({
@@ -90,7 +76,7 @@ const shell = shellAPI.createShell({
           copy: "Pull a fresh reporting snapshot from the backing services.",
           html: `
             <div class="surface-stack">
-              ${denseTable(
+              ${dataTable(
                 ["Field", "Value"],
                 [
                   [escapeHTML("Last refresh"), escapeHTML(dashboard.syncStatus.lastSyncAt ? formatDateTime(dashboard.syncStatus.lastSyncAt) : dashboard.syncStatus.lastError || "No refresh yet")],
@@ -113,7 +99,7 @@ const shell = shellAPI.createShell({
           span: "span-12",
           title: "Status Distribution",
           copy: "Task state totals in the selected timezone context.",
-          html: denseTable(
+          html: dataTable(
             ["Status", "Tasks"],
             dashboard.statusBreakdown.map((status) => [escapeHTML(status.label), escapeHTML(`${status.count} tasks`)])
           )
@@ -123,7 +109,7 @@ const shell = shellAPI.createShell({
           title: "Recently Completed",
           copy: "Recently finished tasks based on completion timestamps from xBacklog.",
           html: dashboard.recentlyCompletedTasks.length
-            ? denseTable(
+            ? dataTable(
                 ["Task", "Project", "Completed"],
                 dashboard.recentlyCompletedTasks.map((task) => [
                   escapeHTML(task.title),
@@ -164,7 +150,7 @@ const shell = shellAPI.createShell({
           title: "Blocked Tasks",
           copy: "Tasks stuck in blocked status are grouped here for follow-up.",
           html: dashboard.blockedTaskCards.length
-            ? denseTable(
+            ? dataTable(
                 ["Task", "Project", "Owner"],
                 dashboard.blockedTaskCards.map((task) => [
                   escapeHTML(task.title),
@@ -186,7 +172,7 @@ const shell = shellAPI.createShell({
           span: "span-6",
           title: "Teams",
           copy: "Project and task load by team.",
-          html: denseTable(
+          html: dataTable(
             ["Team", "Load", "Blocked"],
             dashboard.teamCards.map((team) => [
               escapeHTML(team.name),
@@ -199,7 +185,7 @@ const shell = shellAPI.createShell({
           span: "span-6",
           title: "Users",
           copy: "Assigned work and completion by user.",
-          html: denseTable(
+          html: dataTable(
             ["User", "Assignments", "Done"],
             dashboard.userCards.map((user) => [
               userRef(user),
@@ -221,7 +207,7 @@ const shell = shellAPI.createShell({
           title: "Recent Comments",
           copy: "Recent workflow discussion rendered using the selected timezone.",
           html: dashboard.recentComments.length
-            ? denseTable(
+            ? dataTable(
                 ["Comment", "Body", "When"],
                 dashboard.recentComments.map((comment) => [
                   `${comment.authorUserID ? userRef({ id: comment.authorUserID, displayName: comment.authorName }) : escapeHTML(comment.authorName)} on ${escapeHTML(comment.taskTitle)}`,
@@ -236,7 +222,7 @@ const shell = shellAPI.createShell({
           title: "Task History",
           copy: "Changes coming from task create, update, comment, and status transition events.",
           html: dashboard.recentTaskChanges.length
-            ? denseTable(
+            ? dataTable(
                 ["Event", "Detail", "When"],
                 dashboard.recentTaskChanges.map((event) => [
                   `${event.actorUserID ? userRef(event.actorUserID, event.actorName) : escapeHTML(event.actorName)} · ${escapeHTML(event.taskTitle)}`,

@@ -1,10 +1,12 @@
 const shellAPI = window.XHarborShell;
 const requestJSON = shellAPI.requestJSON;
 const actionButton = shellAPI.actionButton;
-const sectionToolbar = shellAPI.sectionToolbar;
 const rowItem = shellAPI.rowItem;
 const crudListPanel = shellAPI.crudListPanel;
 const crudFormPanel = shellAPI.crudFormPanel;
+const inlineActions = shellAPI.inlineActions;
+const confirmDestructive = shellAPI.confirmDestructive;
+const dataTable = shellAPI.dataTable;
 
 function membershipKey(membership) {
   return `${membership.userID}::${membership.teamID}`;
@@ -31,10 +33,6 @@ function optionMarkup(items, getValue, getLabel, selectedValue) {
     const selected = value === selectedValue ? " selected" : "";
     return `<option value="${shellAPI.escapeHTML(value)}"${selected}>${shellAPI.escapeHTML(getLabel(item))}</option>`;
   }).join("");
-}
-
-function actionsMarkup(actions) {
-  return `<div class="inline-actions">${actions.join("")}</div>`;
 }
 
 function managerOptions(users, selectedValue = "") {
@@ -242,21 +240,6 @@ function highlightHorizontalOrgTree(container, selectedIDs) {
   });
 }
 
-function denseTable(headers, rows) {
-  return `
-    <div class="dense-table">
-      <div class="dense-row dense-head">
-        ${headers.map((header) => `<span class="dense-cell">${shellAPI.escapeHTML(header)}</span>`).join("")}
-      </div>
-      ${rows.map((row) => `
-        <div class="dense-row">
-          ${row.map((cell) => `<span class="dense-cell">${cell}</span>`).join("")}
-        </div>
-      `).join("")}
-    </div>
-  `;
-}
-
 function ensureDirectoryRoutes(state) {
   state.directoryRoutes ??= {};
   return state.directoryRoutes;
@@ -352,7 +335,7 @@ const shell = shellAPI.createShell({
           copy: "The central source of truth used by the rest of xHarbor.",
           badge: `${activeUsers} active accounts`,
           html: `
-            ${denseTable(
+            ${dataTable(
               ["Field", "Value"],
               [
                 [escapeHTML("Organization"), escapeHTML(snapshot.organization.name)],
@@ -383,7 +366,7 @@ const shell = shellAPI.createShell({
           span: "span-12",
           title: "Current Roles",
           copy: "Active users and the team roles they currently hold.",
-          html: denseTable(
+          html: dataTable(
             ["Person", "Memberships", "Status"],
             snapshot.users.map((user) => {
               const status = presence.find((item) => item.userID === user.id)?.isOnline ? "online" : "offline";
@@ -454,7 +437,7 @@ const shell = shellAPI.createShell({
           await refresh();
         });
         document.getElementById("team-delete-button")?.addEventListener("click", async () => {
-          if (!window.confirm(`Delete team "${selectedTeam.name}"? This only works when it has no active memberships.`)) return;
+          if (!confirmDestructive(`Delete team "${selectedTeam.name}"? This only works when it has no active memberships.`)) return;
           await requestJSON(`/api/teams/${selectedTeam.id}`, { method: "DELETE" });
           resetDirectoryRoute(state, "teams");
           await refresh();
@@ -466,14 +449,14 @@ const shell = shellAPI.createShell({
           copy: "Browse teams first, then branch into separate create or edit screens.",
           toolbarTitle: "Teams",
           toolbarActions: [actionButton("Create team", "primary", `data-action="teams-create-view"`)],
-          content: denseTable(
+          content: dataTable(
             ["Team", "Members", "Actions"],
             snapshot.teams.map((team) => {
               const memberCount = snapshot.memberships.filter((membership) => membership.teamID === team.id).length;
               return [
                 escapeHTML(team.name),
                 escapeHTML(`${memberCount} memberships`),
-                actionsMarkup([
+                inlineActions([
                   actionButton("Edit", "secondary", `data-action="teams-edit-view" data-team-id="${team.id}"`),
                   actionButton("Delete", "danger", `data-action="teams-delete" data-team-id="${team.id}" data-team-name="${escapeHTML(team.name)}"`)
                 ])
@@ -499,7 +482,7 @@ const shell = shellAPI.createShell({
           await refresh();
         }
         if (button.dataset.action === "teams-delete") {
-          if (!window.confirm(`Delete team "${button.dataset.teamName}"? This only works when it has no active memberships.`)) return;
+          if (!confirmDestructive(`Delete team "${button.dataset.teamName}"? This only works when it has no active memberships.`)) return;
           await requestJSON(`/api/teams/${button.dataset.teamId}`, { method: "DELETE" });
           resetDirectoryRoute(state, "teams");
           await refresh();
@@ -621,7 +604,7 @@ const shell = shellAPI.createShell({
           await refresh();
         });
         document.getElementById("user-delete-button")?.addEventListener("click", async () => {
-          if (!window.confirm(`Delete user "${userFullName(selectedUser)}"?`)) return;
+          if (!confirmDestructive(`Delete user "${userFullName(selectedUser)}"?`)) return;
           await requestJSON(`/api/users/${selectedUser.id}`, { method: "DELETE" });
           resetDirectoryRoute(state, "users");
           await refresh();
@@ -633,7 +616,7 @@ const shell = shellAPI.createShell({
           copy: "Browse the directory first, then branch into create or edit screens.",
           toolbarTitle: "People",
           toolbarActions: [actionButton("Create user", "primary", `data-action="users-create-view"`)],
-          content: denseTable(
+          content: dataTable(
             ["User", "Profile", "State", "Actions"],
             snapshot.users.map((user) => {
               const presenceState = presence.find((item) => item.userID === user.id)?.isOnline ? "online" : "offline";
@@ -642,7 +625,7 @@ const shell = shellAPI.createShell({
                 `<strong>${userRef(user)}</strong><span class="dense-sub">${escapeHTML(user.email)}</span>`,
                 `${escapeHTML((user.department || "No department"))}<span class="dense-sub">${escapeHTML(user.title || "No title")} · ${manager ? userRef(manager) : escapeHTML("No manager")}</span>`,
                 `<span class="status-pill">${escapeHTML(user.status)}</span><span class="dense-sub">${escapeHTML(presenceState)}</span>`,
-                actionsMarkup([
+                inlineActions([
                   actionButton("Edit", "secondary", `data-action="users-edit-view" data-user-id="${user.id}"`),
                   actionButton("Delete", "danger", `data-action="users-delete" data-user-id="${user.id}" data-user-name="${escapeHTML(userFullName(user))}"`)
                 ])
@@ -668,7 +651,7 @@ const shell = shellAPI.createShell({
           await refresh();
         }
         if (button.dataset.action === "users-delete") {
-          if (!window.confirm(`Delete user "${button.dataset.userName}"?`)) return;
+          if (!confirmDestructive(`Delete user "${button.dataset.userName}"?`)) return;
           await requestJSON(`/api/users/${button.dataset.userId}`, { method: "DELETE" });
           resetDirectoryRoute(state, "users");
           await refresh();
@@ -924,7 +907,7 @@ const shell = shellAPI.createShell({
           await refresh();
         });
         document.getElementById("membership-delete-button")?.addEventListener("click", async () => {
-          if (!window.confirm(`Delete membership "${membershipUser?.displayName || selectedMembership.userID} → ${membershipTeam?.name || selectedMembership.teamID}"?`)) return;
+          if (!confirmDestructive(`Delete membership "${membershipUser?.displayName || selectedMembership.userID} → ${membershipTeam?.name || selectedMembership.teamID}"?`)) return;
           await requestJSON(`/api/memberships/${selectedMembership.userID}/${selectedMembership.teamID}`, { method: "DELETE" });
           resetDirectoryRoute(state, "memberships");
           await refresh();
@@ -936,7 +919,7 @@ const shell = shellAPI.createShell({
           copy: "Browse the role inventory first, then branch into create or edit screens.",
           toolbarTitle: "Memberships",
           toolbarActions: [actionButton("Create membership", "primary", `data-action="memberships-create-view"`)],
-          content: denseTable(
+          content: dataTable(
             ["User", "Team", "Role", "Actions"],
             snapshot.memberships.map((membership) => {
               const user = snapshot.users.find((item) => item.id === membership.userID);
@@ -945,7 +928,7 @@ const shell = shellAPI.createShell({
                 user ? userRef(user) : escapeHTML(membership.userID),
                 escapeHTML(team?.name || membership.teamID),
                 `<span class="status-pill">${escapeHTML(membership.role)}</span>`,
-                actionsMarkup([
+                inlineActions([
                   actionButton("Edit", "secondary", `data-action="memberships-edit-view" data-membership-id="${membershipKey(membership)}"`),
                   actionButton("Delete", "danger", `data-action="memberships-delete" data-user-id="${membership.userID}" data-team-id="${membership.teamID}" data-membership-name="${escapeHTML(`${user?.displayName || membership.userID} → ${team?.name || membership.teamID}`)}"`)
                 ])
@@ -971,7 +954,7 @@ const shell = shellAPI.createShell({
           await refresh();
         }
         if (button.dataset.action === "memberships-delete") {
-          if (!window.confirm(`Delete membership "${button.dataset.membershipName}"?`)) return;
+          if (!confirmDestructive(`Delete membership "${button.dataset.membershipName}"?`)) return;
           await requestJSON(`/api/memberships/${button.dataset.userId}/${button.dataset.teamId}`, { method: "DELETE" });
           resetDirectoryRoute(state, "memberships");
           await refresh();
@@ -1032,7 +1015,7 @@ const shell = shellAPI.createShell({
           toolbarTitle: "Invitations",
           toolbarActions: [actionButton("Create invitation", "primary", `data-action="invitations-create-view"`)],
           content: invitations.length
-            ? denseTable(["Invite", "Access", "State", "Actions"], invitations.map((invitation) => {
+            ? dataTable(["Invite", "Access", "State", "Actions"], invitations.map((invitation) => {
                 const team = snapshot.teams.find((item) => item.id === invitation.teamID);
                 const buttons = invitation.status === "pending"
                   ? [
@@ -1068,7 +1051,7 @@ const shell = shellAPI.createShell({
           await refresh();
         }
         if (button.dataset.action === "revoke-invitation") {
-          if (!window.confirm("Revoke this invitation?")) return;
+          if (!confirmDestructive("Revoke this invitation?")) return;
           await requestJSON(`/api/invitations/${button.dataset.invitationId}/revoke`, { method: "POST", body: JSON.stringify({}) });
           resetDirectoryRoute(state, "invitations");
           await refresh();
@@ -1086,7 +1069,7 @@ const shell = shellAPI.createShell({
           title: "Session Inventory",
           copy: "Session timestamps follow the selected timezone. The toolbar login remains in the top-right corner across every app.",
           html: adminSessions.length
-            ? denseTable(["User", "Expires", "Created", "Actions"], adminSessions.map((session) => [
+            ? dataTable(["User", "Expires", "Created", "Actions"], adminSessions.map((session) => [
                 `<strong>${session.user ? userRef(session.user) : escapeHTML(session.userID)}</strong><span class="dense-sub">${escapeHTML(session.user?.email || session.userID)}</span>`,
                 escapeHTML(formatDateTime(session.expiresAt)),
                 escapeHTML(formatDateTime(session.createdAt)),

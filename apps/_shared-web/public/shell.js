@@ -455,13 +455,21 @@
     return `<button class="${className}" type="button" ${attributes}>${escapeHTML(label)}</button>`;
   }
 
+  function inlineActions(actions = []) {
+    return `<div class="inline-actions">${actions.join("")}</div>`;
+  }
+
+  function confirmDestructive(message) {
+    return window.confirm(message);
+  }
+
   function sectionToolbar(title, actions = []) {
     return `
       <div class="section-toolbar">
         <div class="section-toolbar-copy">
           <strong>${escapeHTML(title)}</strong>
         </div>
-        <div class="inline-actions">${actions.join("")}</div>
+        ${inlineActions(actions)}
       </div>
     `;
   }
@@ -537,6 +545,21 @@
         ${content}
       `
     };
+  }
+
+  function dataTable(headers, rows, className = "data-table") {
+    return `
+      <div class="${escapeHTML(className)}">
+        <div class="data-table-row data-table-head">
+          ${headers.map((header) => `<span class="data-table-cell">${escapeHTML(header)}</span>`).join("")}
+        </div>
+        ${rows.map((row) => `
+          <div class="data-table-row">
+            ${row.map((cell) => `<span class="data-table-cell">${cell}</span>`).join("")}
+          </div>
+        `).join("")}
+      </div>
+    `;
   }
 
   function renderUserHoverCard(user, allUsers) {
@@ -1028,10 +1051,13 @@
     renderEmpty,
     dataCard,
     actionButton,
+    inlineActions,
+    confirmDestructive,
     sectionToolbar,
     rowItem,
     crudListPanel,
     crudFormPanel,
-    crudSidePanel
+    crudSidePanel,
+    dataTable
   };
 })();

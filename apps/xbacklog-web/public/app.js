@@ -6,6 +6,7 @@ const rowItem = shellAPI.rowItem;
 const crudListPanel = shellAPI.crudListPanel;
 const crudFormPanel = shellAPI.crudFormPanel;
 const crudSidePanel = shellAPI.crudSidePanel;
+const confirmDestructive = shellAPI.confirmDestructive;
 
 let selectedTaskID = null;
 let draggedTaskID = null;
@@ -239,7 +240,7 @@ const shell = shellAPI.createShell({
         await refresh();
       });
       document.getElementById("delete-project")?.addEventListener("click", async () => {
-        if (!window.confirm("Delete this project and all related tasks?")) return;
+        if (!confirmDestructive("Delete this project and all related tasks?")) return;
         await requestJSON(`/api/projects/${selectedProjectID}`, { method: "DELETE" });
         state.currentView = "projects";
         backlogRouter.sync({ view: "projects" });
@@ -301,7 +302,7 @@ const shell = shellAPI.createShell({
       });
       document.querySelectorAll("[data-project-delete]").forEach((node) => {
         node.addEventListener("click", async () => {
-          if (!window.confirm("Delete this project and all related tasks?")) return;
+          if (!confirmDestructive("Delete this project and all related tasks?")) return;
           await requestJSON(`/api/projects/${node.dataset.projectDelete}`, { method: "DELETE" });
           await refresh();
         });
@@ -483,7 +484,7 @@ const shell = shellAPI.createShell({
         await refresh();
       });
       document.getElementById("delete-task")?.addEventListener("click", async () => {
-        if (!window.confirm("Delete this task and its comments?")) return;
+        if (!confirmDestructive("Delete this task and its comments?")) return;
         await requestJSON(`/api/tasks/${selectedTaskFromLocation}`, { method: "DELETE" });
         state.currentView = "board";
         backlogRouter.sync({ view: "board" });
