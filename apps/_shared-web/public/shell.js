@@ -107,6 +107,13 @@
     return `<span class="${classes}" style="${style}"${userAttribute}><span class="user-avatar-fallback">${escapeHTML(avatarInitials(entity))}</span></span>`;
   }
 
+  function renderUserRef(entity, fallback = "Unknown user", className = "user-ref-inline", avatarClassName = "") {
+    if (!entity) return escapeHTML(fallback);
+    const userAttribute = entity?.id ? ` data-user-id="${escapeHTML(entity.id)}"` : "";
+    const label = entity?.displayName || avatarLabel(entity);
+    return `<span class="${escapeHTML(className)}"${userAttribute}>${renderAvatar(entity, avatarClassName)}<span>${escapeHTML(label)}</span></span>`;
+  }
+
   function ensureFontAwesome() {
     if (document.getElementById("fontawesome-stylesheet")) {
       return;
@@ -848,6 +855,7 @@
     buildTagSearchURL,
     renderTagText,
     renderAvatar,
+    renderUserRef,
     avatarInitials,
     attachTagAutocomplete,
     createShell,

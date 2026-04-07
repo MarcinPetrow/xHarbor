@@ -104,7 +104,7 @@ function userRef(userID, label) {
   if (!user) {
     return `<span data-user-id="${shellAPI.escapeHTML(userID)}">${shellAPI.escapeHTML(label)}</span>`;
   }
-  return `<span class="user-ref-inline" data-user-id="${shellAPI.escapeHTML(user.id)}">${shellAPI.renderAvatar(user)}<span>${shellAPI.escapeHTML(user.displayName)}</span></span>`;
+  return shellAPI.renderUserRef(user, label);
 }
 
 function userName(userID) {

@@ -327,17 +327,7 @@
 
 .org-avatar {
   --avatar-size: var(--avatar-size-base);
-  width: var(--avatar-size);
-  height: var(--avatar-size);
-  display: grid;
-  place-items: center;
-  border-radius: 999px;
-  background: var(--avatar-bg, rgba(51, 65, 85, 0.12));
-  color: var(--avatar-fg, #334155);
-  font-size: 0.78rem;
-  font-weight: 800;
   letter-spacing: 0.02em;
-  box-shadow: inset 0 0 0 1px rgba(51, 65, 85, 0.12);
 }
 
 .org-card-main {

@@ -119,17 +119,6 @@
 .chat-thread-avatar {
   --avatar-size: var(--avatar-size-base);
   position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--avatar-size);
-  height: var(--avatar-size);
-  border-radius: 50%;
-  background: var(--avatar-bg, rgba(51, 65, 85, 0.12));
-  color: var(--avatar-fg, #334155);
-  font-size: 0.7rem;
-  font-weight: 800;
-  box-shadow: inset 0 0 0 1px rgba(51, 65, 85, 0.12);
 }
 
 .chat-thread.active .chat-thread-avatar {
@@ -266,18 +255,7 @@
 
 .chat-message-avatar {
   --avatar-size: var(--avatar-size-base);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--avatar-size);
-  height: var(--avatar-size);
   margin-top: 2px;
-  border-radius: 50%;
-  background: var(--avatar-bg, rgba(51, 65, 85, 0.12));
-  color: var(--avatar-fg, #334155);
-  font-size: 0.7rem;
-  font-weight: 800;
-  box-shadow: inset 0 0 0 1px rgba(51, 65, 85, 0.12);
 }
 
 .chat-message-content {
@@ -424,16 +402,6 @@
 
 .chat-member-avatar {
   --avatar-size: var(--avatar-size-inline);
-  display: inline-flex;
-  width: var(--avatar-size);
-  height: var(--avatar-size);
-  border-radius: 50%;
-  align-items: center;
-  justify-content: center;
-  background: var(--avatar-bg, rgba(51, 65, 85, 0.12));
-  color: var(--avatar-fg, #334155);
-  font-size: 0.68rem;
-  font-weight: 800;
 }
 
 .chat-archived-item {

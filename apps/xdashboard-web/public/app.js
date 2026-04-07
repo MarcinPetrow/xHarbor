@@ -61,8 +61,7 @@ function rowItem(title, subtitle, meta = "") {
 }
 
 function userRef(user, fallback = "Unknown user") {
-  if (!user) return shellAPI.escapeHTML(fallback);
-  return `<span class="user-ref-inline" data-user-id="${shellAPI.escapeHTML(user.id)}">${shellAPI.renderAvatar(user)}<span>${shellAPI.escapeHTML(user.displayName)}</span></span>`;
+  return shellAPI.renderUserRef(user, fallback);
 }
 
 function denseTable(headers, rows) {
