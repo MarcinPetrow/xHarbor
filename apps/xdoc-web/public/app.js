@@ -264,6 +264,28 @@ function renderMarkdown(markdown) {
   return blocks.join("");
 }
 
+function stripLeadingTitleHeading(markdown, title) {
+  const normalizedTitle = String(title || "").trim().toLowerCase();
+  if (!normalizedTitle) return String(markdown || "");
+
+  const lines = String(markdown || "").replace(/\r\n/g, "\n").split("\n");
+  if (!lines.length) return String(markdown || "");
+
+  const firstLine = lines[0].trim();
+  const headingMatch = firstLine.match(/^#\s+(.+)$/);
+  if (!headingMatch) return String(markdown || "");
+
+  if (headingMatch[1].trim().toLowerCase() !== normalizedTitle) {
+    return String(markdown || "");
+  }
+
+  lines.shift();
+  while (lines.length && !lines[0].trim()) {
+    lines.shift();
+  }
+  return lines.join("\n");
+}
+
 function pageOptions(pages, selectedValue) {
   return [
     `<option value="">Root page</option>`,
@@ -344,6 +366,9 @@ const shell = shellAPI.createShell({
     const page = currentPage();
     const pageRevisions = page ? revisionsForPage(page.id) : [];
     const breadcrumb = page ? pagePath(page.id).join(" / ") : "";
+    const breadcrumbLabel = page
+      ? pagePath(page.id).length > 1 ? breadcrumb : ""
+      : "Select a page from the left sidebar.";
     const pageSidebar = `
       <aside class="doc-sidebar">
         <div class="doc-inline-actions">
@@ -420,21 +445,25 @@ const shell = shellAPI.createShell({
             ${pageSidebar}
             <section class="doc-main">
               <div class="doc-document">
-                <header class="doc-document-header">
-                  <div class="doc-document-copy">
-                    <h2>${escapeHTML(page?.title || "Documentation")}</h2>
-                    <p>${escapeHTML(page ? breadcrumb : "Select a page from the left sidebar.")}</p>
+                <div class="doc-toolbar">
+                  <div class="doc-toolbar-copy">
+                    <span class="doc-breadcrumb">${escapeHTML(breadcrumbLabel)}</span>
                   </div>
                   <div class="doc-mode-actions">
                     <button id="doc-preview-mode" class="doc-icon-button${docMode === "preview" ? " active" : ""}" type="button" aria-label="Preview document" title="Preview"><i class="fa-solid fa-eye" aria-hidden="true"></i></button>
                     <button id="doc-edit-mode" class="doc-icon-button${docMode === "edit" ? " active" : ""}" type="button" aria-label="Edit document" title="Edit"><i class="fa-solid fa-pen" aria-hidden="true"></i></button>
                     <button id="doc-history-mode" class="doc-icon-button${docMode === "history" ? " active" : ""}" type="button" aria-label="View history" title="History"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i></button>
                   </div>
-                </header>
+                </div>
                 ${docMode === "preview" ? `
                   <div class="doc-main-grid">
                     <article class="doc-preview-body">
-                      ${page ? renderMarkdown(page.content) : renderEmpty("Preview unavailable", "Select a page to render its markdown.")}
+                      ${page ? `
+                        <div class="doc-page-heading">
+                          <h1>${escapeHTML(page.title)}</h1>
+                        </div>
+                        ${renderMarkdown(stripLeadingTitleHeading(page.content, page.title))}
+                      ` : renderEmpty("Preview unavailable", "Select a page to render its markdown.")}
                     </article>
                     <aside class="doc-metadata">
                       ${page ? `
@@ -488,7 +517,9 @@ const shell = shellAPI.createShell({
                 ${docMode === "history" ? `
                   <div class="doc-main-grid">
                     <article class="doc-revision-table">
-                      ${page ? revisionTable(pageRevisions, formatDateTime) : renderEmpty("No page selected", "Select a page to inspect its revision history.")}
+                      ${page ? `
+                        ${revisionTable(pageRevisions, formatDateTime)}
+                      ` : renderEmpty("No page selected", "Select a page to inspect its revision history.")}
                     </article>
                     <aside class="doc-metadata">
                       ${page ? `
