@@ -2,6 +2,8 @@ const shellAPI = window.XHarborShell;
 const requestJSON = shellAPI.requestJSON;
 const rowItem = shellAPI.rowItem;
 const dataTable = shellAPI.dataTable;
+const viewPanel = shellAPI.viewPanel;
+const bindActions = shellAPI.bindActions;
 
 async function fetchDashboard() {
   return requestJSON("/api/dashboard", { headers: {} });
@@ -49,12 +51,12 @@ const shell = shellAPI.createShell({
       setHeader("Dashboard Access", "Reporting is available after authentication through the shared top-right login control.", "Signed out");
       setMetrics([]);
       setPanels([
-        {
+        viewPanel({
           span: "span-12",
           title: "Locked",
           copy: "Authenticate to pull data from xGroup and xBacklog.",
           html: renderEmpty("Sign in required", "Use the right side of the nav bar to authenticate into xDashboard.")
-        }
+        })
       ]);
       return;
     }
@@ -70,7 +72,7 @@ const shell = shellAPI.createShell({
       ]);
       setHeader("Executive Summary", "A compact reporting view with refresh controls and high-level metrics separated from the detailed analysis screens.", dashboard.syncStatus.lastSyncSucceeded ? "Sources synced" : "Sync pending");
       setPanels([
-        {
+        viewPanel({
           span: "span-5",
           title: "Source Refresh",
           copy: "Pull a fresh reporting snapshot from the backing services.",
@@ -83,19 +85,19 @@ const shell = shellAPI.createShell({
                   [escapeHTML("Sources"), escapeHTML(`${dashboard.summary.teamCount} teams · ${dashboard.summary.projectCount} projects · ${dashboard.summary.taskCount} tasks`)]
                 ]
               )}
-              <button id="refresh-button" class="shell-button" type="button">Refresh sources</button>
+              <button class="shell-button" type="button" data-action="refresh-sources">Refresh sources</button>
             </div>
           `
-        },
-        {
+        }),
+        viewPanel({
           span: "span-7",
           title: "Reports",
           copy: "Top-level report definitions visible without pushing every chart onto one page.",
           html: dashboard.reports.length
             ? `<div class="row-list">${dashboard.reports.map((report) => rowItem(report.title, report.description)).join("")}</div>`
             : renderEmpty("No reports", "Refresh the sources to materialize reports.")
-        },
-        {
+        }),
+        viewPanel({
           span: "span-12",
           title: "Status Distribution",
           copy: "Task state totals in the selected timezone context.",
@@ -103,8 +105,8 @@ const shell = shellAPI.createShell({
             ["Status", "Tasks"],
             dashboard.statusBreakdown.map((status) => [escapeHTML(status.label), escapeHTML(`${status.count} tasks`)])
           )
-        },
-        {
+        }),
+        viewPanel({
           span: "span-12",
           title: "Recently Completed",
           copy: "Recently finished tasks based on completion timestamps from xBacklog.",
@@ -118,13 +120,15 @@ const shell = shellAPI.createShell({
                 ])
               )
             : renderEmpty("No completed tasks", "Completed work will appear here once items reach Done.")
-        }
+        })
       ]);
 
-      document.getElementById("refresh-button")?.addEventListener("click", async () => {
-        await refreshSources();
-        await refresh();
-      });
+      bindActions("#view-content", {
+        "refresh-sources": async () => {
+          await refreshSources();
+          await refresh();
+        }
+      }, "xdashboard-overview");
       return;
     }
 
@@ -132,7 +136,7 @@ const shell = shellAPI.createShell({
       setMetrics([]);
       setHeader("Risks", "Blocked work and alerts are isolated into a dedicated operational view instead of sharing space with every other dashboard card.", `${dashboard.risks.length} risks`);
       setPanels([
-        {
+        viewPanel({
           span: "span-5",
           title: "Risk Register",
           copy: "High-level warnings derived from the delivery flow.",
@@ -144,8 +148,8 @@ const shell = shellAPI.createShell({
                 </article>
               `).join("")}</div>`
             : renderEmpty("No active risks", "Current data does not expose critical issues.")
-        },
-        {
+        }),
+        viewPanel({
           span: "span-7",
           title: "Blocked Tasks",
           copy: "Tasks stuck in blocked status are grouped here for follow-up.",
@@ -159,7 +163,7 @@ const shell = shellAPI.createShell({
                 ])
               )
             : renderEmpty("No blocked work", "Blocked tasks will appear here.")
-        }
+        })
       ]);
       return;
     }
@@ -168,7 +172,7 @@ const shell = shellAPI.createShell({
       setMetrics([]);
       setHeader("Team Load", "Team and user workload moved into a dedicated analysis area instead of stretching the main summary screen.", `${dashboard.teamCards.length} teams`);
       setPanels([
-        {
+        viewPanel({
           span: "span-6",
           title: "Teams",
           copy: "Project and task load by team.",
@@ -180,8 +184,8 @@ const shell = shellAPI.createShell({
               escapeHTML(`${team.blockedTaskCount}`)
             ])
           )
-        },
-        {
+        }),
+        viewPanel({
           span: "span-6",
           title: "Users",
           copy: "Assigned work and completion by user.",
@@ -193,7 +197,7 @@ const shell = shellAPI.createShell({
               escapeHTML(`${user.completedTaskCount}`)
             ])
           )
-        }
+        })
       ]);
       return;
     }
@@ -202,7 +206,7 @@ const shell = shellAPI.createShell({
       setMetrics([]);
       setHeader("Recent Activity", "Recent delivery discussion and task history in one compact operational timeline.", `${dashboard.summary.taskEventCount} task events`);
       setPanels([
-        {
+        viewPanel({
           span: "span-6",
           title: "Recent Comments",
           copy: "Recent workflow discussion rendered using the selected timezone.",
@@ -216,8 +220,8 @@ const shell = shellAPI.createShell({
                 ])
               )
             : renderEmpty("No comment activity", "Workflow discussion will appear here.")
-        },
-        {
+        }),
+        viewPanel({
           span: "span-6",
           title: "Task History",
           copy: "Changes coming from task create, update, comment, and status transition events.",
@@ -231,7 +235,7 @@ const shell = shellAPI.createShell({
                 ])
               )
             : renderEmpty("No task history", "Task changes will appear here after the next board actions.")
-        }
+        })
       ]);
     }
   }

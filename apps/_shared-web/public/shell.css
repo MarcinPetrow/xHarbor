@@ -946,6 +946,11 @@ select {
   padding: 12px;
 }
 
+.named-section {
+  display: grid;
+  gap: 10px;
+}
+
 .data-card h3,
 .settings-card h3,
 .empty-state strong {

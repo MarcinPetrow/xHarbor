@@ -1,5 +1,8 @@
 const shellAPI = window.XHarborShell;
 const requestJSON = shellAPI.requestJSON;
+const viewPanel = shellAPI.viewPanel;
+const namedSection = shellAPI.namedSection;
+const bindActions = shellAPI.bindActions;
 
 async function fetchTags(query = "") {
   const search = query ? `?query=${encodeURIComponent(query)}` : "";
@@ -122,12 +125,12 @@ const shell = shellAPI.createShell({
       setHeader("Tag Search Access", "Tag search is available after authentication through the shared top-right login control.", "Signed out");
       setMetrics([]);
       setPanels([
-        {
+        viewPanel({
           span: "span-12",
           title: "Locked",
           copy: "Authenticate to aggregate hashtags across platform modules.",
           html: renderEmpty("Sign in required", "Use the right side of the nav bar to authenticate into xTag.")
-        }
+        })
       ]);
       return;
     }
@@ -145,7 +148,7 @@ const shell = shellAPI.createShell({
 
     const tagChips = payload.tags.length
       ? `<div class="tag-chip-list">${payload.tags.map((tag) => `
-          <button class="tag-chip${payload.query && tag.tag === payload.query ? " active" : ""}" type="button" data-tag-value="${escapeHTML(tag.tag)}">
+          <button class="tag-chip${payload.query && tag.tag === payload.query ? " active" : ""}" type="button" data-action="select-tag" data-tag="${escapeHTML(tag.tag)}">
             <strong>${escapeHTML(tag.displayTag)}</strong>
             <span>${escapeHTML(String(tag.itemCount))}</span>
           </button>
@@ -153,7 +156,7 @@ const shell = shellAPI.createShell({
       : renderEmpty("No tags", "Refresh the index or add hashtags in xTalk, xBacklog, or xDoc.");
 
     setPanels([
-      {
+      viewPanel({
         span: "span-12",
         title: "Search",
         copy: "Search accepts tags with or without a leading #. Matching is case insensitive.",
@@ -161,7 +164,7 @@ const shell = shellAPI.createShell({
           <form id="tag-search-form" class="tag-search-form">
             <input id="tag-search-input" class="tag-search-input" type="search" placeholder="#platform, auth, release" value="${escapeHTML(currentQuery)}">
             <button class="shell-button" type="submit">Search</button>
-            <button id="tag-reindex-button" class="shell-button-secondary" type="button">Reindex</button>
+            <button class="shell-button-secondary" type="button" data-action="reindex-tags">Reindex</button>
           </form>
           <div class="tag-source-strip">
             ${(payload.index.sources || []).map((source) => `
@@ -169,14 +172,14 @@ const shell = shellAPI.createShell({
             `).join("")}
           </div>
         `
-      },
-      {
+      }),
+      viewPanel({
         span: "span-12",
         title: "Known Tags",
         copy: payload.query ? `Matching results for #${payload.query}.` : "Most active tags across the indexed modules.",
         html: tagChips
-      },
-      {
+      }),
+      viewPanel({
         span: "span-12",
         title: "Tag Management",
         copy: "Merge similar tags into one canonical tag without rewriting source content.",
@@ -199,7 +202,7 @@ const shell = shellAPI.createShell({
                         <span class="row-subtitle">Canonical: <a class="tag-link" href="${shellAPI.buildTagSearchURL(alias.canonicalTag)}">#${escapeHTML(alias.canonicalTag)}</a></span>
                       </div>
                       <div class="row-meta">
-                        <button class="shell-button-secondary" type="button" data-remove-alias="${escapeHTML(alias.tag)}">Remove</button>
+                        <button class="shell-button-secondary" type="button" data-action="remove-alias" data-tag="${escapeHTML(alias.tag)}">Remove</button>
                       </div>
                     </article>
                   `).join("")
@@ -214,7 +217,7 @@ const shell = shellAPI.createShell({
                         <span class="row-subtitle">#${escapeHTML(suggestion.tag)} → #${escapeHTML(suggestion.canonicalTag)}</span>
                       </div>
                       <div class="row-meta">
-                        <button class="shell-button-secondary" type="button" data-apply-suggestion="${escapeHTML(suggestion.tag)}" data-suggestion-canonical="${escapeHTML(suggestion.canonicalTag)}">Apply</button>
+                        <button class="shell-button-secondary" type="button" data-action="apply-suggestion" data-tag="${escapeHTML(suggestion.tag)}" data-canonical-tag="${escapeHTML(suggestion.canonicalTag)}">Apply</button>
                       </div>
                     </article>
                   `).join("")
@@ -222,20 +225,17 @@ const shell = shellAPI.createShell({
             </div>
           </div>
         `
-      },
-      {
+      }),
+      viewPanel({
         span: "span-12",
         title: "Results",
         copy: payload.query ? `Entities containing #${payload.query}.` : "Recent tagged entities across the platform.",
         html: payload.groupedItems.length
-          ? payload.groupedItems.map((group) => `
-              <section class="tag-result-group">
-                <div class="panel-heading">
-                  <div>
-                    <h2 class="panel-title">${escapeHTML(sourceLabel(group.source))}</h2>
-                    <p class="panel-copy">${escapeHTML(`${group.items.length} tagged ${group.items.length === 1 ? "result" : "results"}`)}</p>
-                  </div>
-                </div>
+          ? payload.groupedItems.map((group) => namedSection({
+              title: sourceLabel(group.source),
+              copy: `${group.items.length} tagged ${group.items.length === 1 ? "result" : "results"}`,
+              className: "tag-result-group",
+              content: `
                 <div class="row-list">
                   ${group.items.map((item) => `
                     <article class="data-card tag-result-card">
@@ -251,16 +251,16 @@ const shell = shellAPI.createShell({
                       </div>
                       <p>${shellAPI.renderTagText(item.excerpt)}</p>
                       <div class="tag-chip-list compact">
-                        ${item.tags.map((tag) => `<button class="tag-chip small${payload.query && tag === payload.query ? " active" : ""}" type="button" data-tag-value="${escapeHTML(tag)}"><strong>#${escapeHTML(tag)}</strong></button>`).join("")}
+                        ${item.tags.map((tag) => `<button class="tag-chip small${payload.query && tag === payload.query ? " active" : ""}" type="button" data-action="select-tag" data-tag="${escapeHTML(tag)}"><strong>#${escapeHTML(tag)}</strong></button>`).join("")}
                       </div>
                       ${item.lastSeenAt ? `<div class="dense-sub">Last activity: ${escapeHTML(formatDateTime(item.lastSeenAt))}</div>` : ""}
                     </article>
                   `).join("")}
                 </div>
-              </section>
-            `).join("")
+              `
+            })).join("")
           : renderEmpty("No tagged entities", payload.query ? "No indexed entities contain this tag yet." : "Reindex the platform to load tagged entities.")
-      }
+      })
     ]);
 
     document.getElementById("tag-search-form")?.addEventListener("submit", async (event) => {
@@ -271,11 +271,6 @@ const shell = shellAPI.createShell({
 
     shellAPI.attachTagAutocomplete(document.getElementById("tag-search-input"));
 
-    document.getElementById("tag-reindex-button")?.addEventListener("click", async () => {
-      await reindexTags();
-      await refresh();
-    });
-
     document.getElementById("tag-alias-form")?.addEventListener("submit", async (event) => {
       event.preventDefault();
       const sourceTag = document.getElementById("tag-alias-source")?.value || "";
@@ -285,27 +280,25 @@ const shell = shellAPI.createShell({
       await refresh();
     });
 
-    document.querySelectorAll("[data-remove-alias]").forEach((button) => {
-      button.addEventListener("click", async () => {
-        await deleteAlias(button.dataset.removeAlias || "");
+    bindActions("#view-content", {
+      "reindex-tags": async () => {
+        await reindexTags();
         await refresh();
-      });
-    });
-
-    document.querySelectorAll("[data-apply-suggestion]").forEach((button) => {
-      button.addEventListener("click", async () => {
-        await createAlias(button.dataset.applySuggestion || "", button.dataset.suggestionCanonical || "");
-        currentQuery = button.dataset.suggestionCanonical || currentQuery;
+      },
+      "remove-alias": async (button) => {
+        await deleteAlias(button.dataset.tag || "");
         await refresh();
-      });
-    });
-
-    document.querySelectorAll("[data-tag-value]").forEach((button) => {
-      button.addEventListener("click", async () => {
-        currentQuery = button.dataset.tagValue || "";
+      },
+      "apply-suggestion": async (button) => {
+        await createAlias(button.dataset.tag || "", button.dataset.canonicalTag || "");
+        currentQuery = button.dataset.canonicalTag || currentQuery;
         await refresh();
-      });
-    });
+      },
+      "select-tag": async (button) => {
+        currentQuery = button.dataset.tag || "";
+        await refresh();
+      }
+    }, "xtag-actions");
   }
 });
 

@@ -75,6 +75,28 @@
     };
   }
 
+  function bindActions(root, handlers = {}, key = "default") {
+    const target = typeof root === "string" ? document.querySelector(root) : root;
+    if (!target) return () => {};
+    target.__xharborActionDelegates ??= new Map();
+    target.__xharborActionDelegates.get(key)?.();
+    const listener = async (event) => {
+      const node = event.target.closest("[data-action]");
+      if (!node || !target.contains(node)) return;
+      const action = node.dataset.action;
+      const handler = handlers[action];
+      if (typeof handler !== "function") return;
+      await handler(node, event);
+    };
+    target.addEventListener("click", listener);
+    const cleanup = () => {
+      target.removeEventListener("click", listener);
+      target.__xharborActionDelegates?.delete(key);
+    };
+    target.__xharborActionDelegates.set(key, cleanup);
+    return cleanup;
+  }
+
   function renderTagText(value) {
     const input = String(value ?? "");
     let cursor = 0;
@@ -471,6 +493,38 @@
         </div>
         ${inlineActions(actions)}
       </div>
+    `;
+  }
+
+  function viewPanel({
+    span = "span-12",
+    title = "",
+    copy = "",
+    html = "",
+    badge = ""
+  }) {
+    return { span, title, copy, html, badge };
+  }
+
+  function namedSection({
+    title,
+    copy = "",
+    content = "",
+    actions = "",
+    className = ""
+  }) {
+    const classes = ["named-section", className].filter(Boolean).join(" ");
+    return `
+      <section class="${classes}">
+        <div class="panel-heading">
+          <div>
+            <h2 class="panel-title">${escapeHTML(title)}</h2>
+            ${copy ? `<p class="panel-copy">${escapeHTML(copy)}</p>` : ""}
+          </div>
+          ${actions ? `<div class="panel-actions">${actions}</div>` : ""}
+        </div>
+        ${content}
+      </section>
     `;
   }
 
@@ -1035,6 +1089,7 @@
     readLocationState,
     syncLocationState,
     createQueryRouter,
+    bindActions,
     buildTagSearchURL,
     renderTagText,
     renderAvatar,
@@ -1054,6 +1109,8 @@
     inlineActions,
     confirmDestructive,
     sectionToolbar,
+    viewPanel,
+    namedSection,
     rowItem,
     crudListPanel,
     crudFormPanel,
