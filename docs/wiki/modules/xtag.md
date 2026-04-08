@@ -17,4 +17,4 @@
 
 ## Notes
 
-`xTag` is intentionally built as an aggregator, not as an owner of domain data. Source modules remain responsible for their own entities and only expose tagged results through module APIs.
+`xTag` is intentionally built as an aggregator, not as an owner of domain data. Source modules remain responsible for their own entities and only expose tagged results through module APIs. Search, alias merge, and tag selection now follow the same shared route/query and delegated form patterns used elsewhere in the web platform.

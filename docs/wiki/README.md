@@ -2,6 +2,8 @@
 
 This wiki is the fast path into the platform. It complements the product and architecture docs with practical guides, module overviews, and UI references from the running apps.
 
+The current web platform also shares one browser shell in `apps/_shared-web`. That layer keeps navigation, avatars, preferences, CRUD scaffolding, routing helpers, and common interaction wiring aligned across apps.
+
 ## Start here
 
 - [Getting started](getting-started.md)

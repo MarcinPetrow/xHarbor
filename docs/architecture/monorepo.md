@@ -59,7 +59,17 @@ Cross-app integration should happen through contracts, read models, and explicit
 ### 4. Shared shell is a platform concern
 
 Web apps share one shell and common browser-side helpers through `apps/_shared-web`.
-That keeps branding, navigation patterns, settings, and common interaction layers aligned without merging domain logic.
+That keeps branding, navigation patterns, settings, avatars, and common interaction layers aligned without merging domain logic.
+
+The shared shell now owns:
+
+- top bar and bottom bar templates
+- accent and timezone preferences
+- avatar rendering and user references
+- delegated action and form binding
+- route/query state helpers
+- shared CRUD panel helpers
+- shared drag/drop and pannable surface helpers
 
 ### 5. Local persistence stays simple
 
@@ -73,6 +83,18 @@ This keeps the stack easy to run while preserving state across the active module
 - `xTalk` also has a native macOS client
 - shared browser UI lives in `_shared-web`
 - shared backend concerns live in `packages/*`
+
+## Web interaction model
+
+Across the web apps, common interaction patterns are intentionally centralized instead of reimplemented per module:
+
+- CRUD-style list/create/edit flows use shared panel primitives
+- route and query state flows use shared router helpers
+- `data-action` handling uses shared delegated listeners
+- form submission uses shared delegated submit helpers
+- board and tree interaction helpers are shared where possible
+
+Modules keep domain rules and payload shaping local, but shared UI behavior is expected to come from `_shared-web`.
 
 ## Suggested implementation order for future modules
 

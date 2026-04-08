@@ -20,4 +20,4 @@
 
 ## Notes
 
-The page tree is the primary navigation surface. Document preview stays separate from editing so reading, writing, and history inspection remain distinct flows.
+The page tree is the primary navigation surface. Document preview stays separate from editing so reading, writing, and history inspection remain distinct flows. The current web implementation also uses the shared shell interaction layer for page selection, mode switching, and editor submit handling.

@@ -25,4 +25,12 @@ This directory contains the application entry points for xHarbor.
 
 - `_shared-web`: shared shell, branding, preferences, and common browser-side helpers used by the web apps
 
+`_shared-web` is also where the web platform keeps:
+- shared nav bar and bottom bar templates
+- shared avatar rendering
+- shared CRUD panel helpers
+- delegated action and form wiring
+- shared route/query state helpers
+- shared drag/drop and pannable interaction helpers
+
 The active implementation path for web modules is the Node monorepo workspace setup defined in the repository root `package.json`.

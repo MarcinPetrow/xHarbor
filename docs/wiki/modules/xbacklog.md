@@ -14,10 +14,10 @@
 
 ## Main views
 
-- `Board` for day-to-day task movement
-- `Projects` for project creation and maintenance
+- `Board` for day-to-day task movement and dedicated task entry points
+- `Projects` for project list, create, edit, and delete flows
 - `Comments` for recent workflow discussion
 
 ## Notes
 
-`xBacklog` is designed as a compact execution tool rather than a general dashboard. The board keeps task movement and task detail close together, while projects and comments stay in separate views.
+`xBacklog` is designed as a compact execution tool rather than a general dashboard. The board stays focused on task movement and task selection, while project and task create/edit flows are handled in dedicated screens instead of being mixed into list pages.

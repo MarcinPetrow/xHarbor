@@ -102,6 +102,8 @@ xHarbor is a modular monorepo. Each domain module has its own API and web app. M
 
 `xTalk` also has a native macOS client implemented in Swift. The active runtime path for web and backend modules is Node. Local persistence uses SQLite.
 
+Web apps also share one browser shell in `apps/_shared-web`. That shell owns the top bar, bottom bar, avatar rendering, preferences, and the common interaction helpers used across CRUD views, routing, delegated actions, forms, and board/tree interactions.
+
 ## Design principles
 
 - explicit domain boundaries

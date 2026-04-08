@@ -2,12 +2,13 @@
 
 ## What xHarbor gives you
 
-xHarbor combines five platform modules into one local-first system:
+xHarbor combines six platform modules into one local-first system:
 
 - `xGroup` for people, teams, invitations, sessions, and reporting lines
 - `xBacklog` for projects, tasks, and delivery workflow
 - `xDashboard` for reporting built from platform data
 - `xTalk` for rooms and direct communication across web and macOS
+- `xTag` for cross-system hashtag search and normalization
 - `xDoc` for structured Markdown documentation and revision history
 
 ## Run the platform
@@ -39,4 +40,5 @@ Each web app uses the shared xHarbor shell and the same login flow. Use the top-
 2. Open `xBacklog` and review the board, project catalog, and task detail flow.
 3. Open `xDashboard` to see reporting built from `xGroup` and `xBacklog`.
 4. Open `xTalk` to review rooms, direct messages, and presence behavior.
-5. Open `xDoc` to browse Markdown pages, preview content, edit a page, and inspect its revision history.
+5. Open `xTag` to inspect cross-system tag search and alias management.
+6. Open `xDoc` to browse Markdown pages, preview content, edit a page, and inspect its revision history.

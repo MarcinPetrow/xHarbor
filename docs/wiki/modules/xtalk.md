@@ -18,4 +18,4 @@
 
 ## Notes
 
-The web and macOS clients are designed to stay behaviorally aligned. Presence is session-aware, direct messages and rooms share the same left-rail navigation pattern, and the shell uses the same top-level branding and access model as the rest of the platform.
+The web and macOS clients are designed to stay behaviorally aligned. Presence is session-aware, direct messages and rooms share the same left-rail navigation pattern, and the web client now leans on the shared shell for delegated actions, form handling, and route/query sync instead of app-local interaction wiring.
