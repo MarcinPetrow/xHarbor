@@ -1,5 +1,10 @@
 const shellAPI = window.XHarborShell;
 const requestJSON = shellAPI.requestJSON;
+const bindActions = shellAPI.bindActions;
+const bindDelegatedEvent = shellAPI.bindDelegatedEvent;
+const bindFormSubmit = shellAPI.bindFormSubmit;
+const createStateRefresher = shellAPI.createStateRefresher;
+const viewPanel = shellAPI.viewPanel;
 
 let chatStream;
 let selectedThread = { kind: "room", id: null };
@@ -184,7 +189,7 @@ function preferredRoomTeamID(workspace, currentUserID) {
 
 function threadItem(title, copy, unread, active, kind, id, presence = "", userID = "", avatarEntity = null) {
   return `
-    <article class="chat-thread${active ? " active" : ""}" data-thread-kind="${kind}" data-thread-id="${id}">
+    <article class="chat-thread${active ? " active" : ""}" data-action="select-thread" data-thread-kind="${kind}" data-thread-id="${id}">
       <div class="chat-thread-body">
         ${shellAPI.renderAvatar(avatarEntity || { id, displayName: title }, "chat-thread-avatar")}
         <div class="chat-thread-meta">
@@ -383,12 +388,12 @@ shell = shellAPI.createShell({
       setHeader("", "", "", { hidden: true });
       setMetrics([]);
       setPanels([
-        {
+        viewPanel({
           span: "span-12",
           title: "Locked",
           copy: "xTalk uses the shared xGroup session authority.",
           html: renderEmpty("Sign in required", "Use the login controls in the navbar.")
-        }
+        })
       ]);
       return;
     }
@@ -402,6 +407,10 @@ shell = shellAPI.createShell({
     }
 
     const [payload, presence] = await Promise.all([loadChat(), loadPresence()]);
+    const refreshThreadState = createStateRefresher({
+      refresh,
+      sync: () => threadRouter.sync(selectedThread)
+    });
     const roomTeamID = preferredRoomTeamID(payload.workspace, state.session.user.id);
     const presenceByUserID = new Map(presence.map((item) => [item.userID, item.presence || (item.isOnline ? "online" : "offline")]));
     const directThreads = payload.directConversations.map((conversation) => {
@@ -501,7 +510,7 @@ shell = shellAPI.createShell({
     setMetrics([]);
     setHeader("", "", "", { hidden: true });
     setPanels([
-      {
+      viewPanel({
         span: "span-12",
         className: "panel-bare",
         html: `
@@ -511,10 +520,10 @@ shell = shellAPI.createShell({
                 <div class="chat-mini-section">
                   <div class="chat-section-heading">
                     <strong>Rooms</strong>
-                    <button id="open-room-composer" class="chat-icon-button" type="button" aria-label="Create room"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+                    <button class="chat-icon-button" type="button" data-action="toggle-room-composer" aria-label="Create room"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
                   </div>
                   <form id="room-form" class="compact-stack chat-inline-form hidden">
-                    <input id="room-name" class="shell-input" placeholder="New room" required>
+                    <input id="room-name" name="name" class="shell-input" placeholder="New room" required>
                     <button class="shell-button-secondary" type="submit"${roomTeamID ? "" : " disabled"}>Create room</button>
                   </form>
                   <div id="room-thread-list" class="chat-thread-list">
@@ -526,10 +535,10 @@ shell = shellAPI.createShell({
                 <div class="chat-mini-section">
                   <div class="chat-section-heading">
                     <strong>Direct Messages</strong>
-                    <button id="open-dm-composer" class="chat-icon-button" type="button" aria-label="Open direct message"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+                    <button class="chat-icon-button" type="button" data-action="toggle-dm-composer" aria-label="Open direct message"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
                   </div>
                   <form id="dm-form" class="compact-stack chat-inline-form hidden">
-                    <select id="dm-user" class="shell-select">
+                    <select id="dm-user" name="participantUserID" class="shell-select">
                       ${payload.workspace.users
                         .filter((user) => user.id !== state.session.user.id && user.status === "active")
                         .map((user) => `<option value="${escapeHTML(user.id)}">${escapeHTML(user.displayName)}</option>`).join("")}
@@ -553,7 +562,7 @@ shell = shellAPI.createShell({
                   <div class="chat-scroll-anchor" aria-hidden="true"></div>
                 </div>
                 <form id="message-form" class="chat-composer">
-                  <textarea id="message-body" class="shell-textarea chat-composer-input" placeholder="Write a message" required></textarea>
+                  <textarea id="message-body" name="body" class="shell-textarea chat-composer-input" placeholder="Write a message" required></textarea>
                   <div class="inline-actions">
                     <button id="message-send-button" class="shell-button chat-send-button" type="submit" aria-label="Send message" title="Send message" disabled><i class="fa-solid fa-paper-plane" aria-hidden="true"></i></button>
                   </div>
@@ -590,51 +599,47 @@ shell = shellAPI.createShell({
             </aside>
           </div>
         `
-      }
+      })
     ]);
 
-    document.querySelectorAll("[data-thread-id]").forEach((node) => {
-      node.addEventListener("click", async () => {
-        selectedThread = { kind: node.dataset.threadKind, id: node.dataset.threadId };
-        threadRouter.sync(selectedThread);
-        forceScrollToBottom = true;
-        chatStickToBottom = true;
-        await refresh();
-      });
-    });
+    bindActions("#view-content", {
+      "select-thread": async (node) => {
+        await refreshThreadState(() => {
+          selectedThread = { kind: node.dataset.threadKind, id: node.dataset.threadId };
+          forceScrollToBottom = true;
+          chatStickToBottom = true;
+        });
+      },
+      "toggle-room-composer": () => {
+        document.getElementById("room-form")?.classList.toggle("hidden");
+      },
+      "toggle-dm-composer": () => {
+        document.getElementById("dm-form")?.classList.toggle("hidden");
+      }
+    }, "xtalk-actions");
 
-    document.getElementById("open-room-composer")?.addEventListener("click", () => {
-      document.getElementById("room-form")?.classList.toggle("hidden");
-    });
-
-    document.getElementById("open-dm-composer")?.addEventListener("click", () => {
-      document.getElementById("dm-form")?.classList.toggle("hidden");
-    });
-
-    document.getElementById("room-form")?.addEventListener("submit", async (event) => {
-      event.preventDefault();
+    bindFormSubmit("#view-content", "#room-form", async (formData) => {
       const room = await requestJSON("/api/rooms", {
         method: "POST",
         body: JSON.stringify({
-          name: document.getElementById("room-name").value,
+          name: formData.get("name"),
           teamID: roomTeamID
         })
       });
-      selectedThread = { kind: "room", id: room.id };
-      threadRouter.sync(selectedThread);
-      await refresh();
-    });
+      await refreshThreadState(() => {
+        selectedThread = { kind: "room", id: room.id };
+      });
+    }, "xtalk-room-submit");
 
-    document.getElementById("dm-form")?.addEventListener("submit", async (event) => {
-      event.preventDefault();
+    bindFormSubmit("#view-content", "#dm-form", async (formData) => {
       const conversation = await requestJSON("/api/direct-conversations", {
         method: "POST",
-        body: JSON.stringify({ participantUserID: document.getElementById("dm-user").value })
+        body: JSON.stringify({ participantUserID: formData.get("participantUserID") })
       });
-      selectedThread = { kind: "direct", id: conversation.id };
-      threadRouter.sync(selectedThread);
-      await refresh();
-    });
+      await refreshThreadState(() => {
+        selectedThread = { kind: "direct", id: conversation.id };
+      });
+    }, "xtalk-dm-submit");
 
     const messageBodyField = document.getElementById("message-body");
     const messageSendButton = document.getElementById("message-send-button");
@@ -644,10 +649,9 @@ shell = shellAPI.createShell({
       messageSendButton.disabled = !messageBodyField.value.trim();
     }
 
-    document.getElementById("message-form")?.addEventListener("submit", async (event) => {
-      event.preventDefault();
+    bindFormSubmit("#view-content", "#message-form", async (formData) => {
       const bodyField = messageBodyField;
-      const body = bodyField.value;
+      const body = formData.get("body") || "";
       if (!body.trim()) return;
       if (selectedThread.kind === "room") {
         await requestJSON(`/api/rooms/${selectedThread.id}/messages`, {
@@ -666,20 +670,20 @@ shell = shellAPI.createShell({
       focusComposerAfterRefresh = true;
       keepComposerFocusCycles = 3;
       await refresh();
-    });
+    }, "xtalk-message-submit");
 
     shellAPI.attachTagAutocomplete(messageBodyField);
 
-    messageBodyField?.addEventListener("input", () => {
+    bindDelegatedEvent("#view-content", "input", "#message-body", () => {
       syncMessageComposerState();
-    });
+    }, "xtalk-message-input");
 
-    messageBodyField?.addEventListener("keydown", (event) => {
+    bindDelegatedEvent("#view-content", "keydown", "#message-body", (_field, event) => {
       if (event.key === "Enter" && !event.shiftKey) {
         event.preventDefault();
         document.getElementById("message-form")?.requestSubmit();
       }
-    });
+    }, "xtalk-message-keydown");
 
     syncMessageComposerState();
 

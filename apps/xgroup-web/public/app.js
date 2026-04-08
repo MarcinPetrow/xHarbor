@@ -7,6 +7,11 @@ const crudFormPanel = shellAPI.crudFormPanel;
 const inlineActions = shellAPI.inlineActions;
 const confirmDestructive = shellAPI.confirmDestructive;
 const dataTable = shellAPI.dataTable;
+const bindActions = shellAPI.bindActions;
+const bindFormSubmit = shellAPI.bindFormSubmit;
+const createStateRefresher = shellAPI.createStateRefresher;
+const bindDelegatedEvent = shellAPI.bindDelegatedEvent;
+const bindPannableScroll = shellAPI.bindPannableScroll;
 
 function membershipKey(membership) {
   return `${membership.userID}::${membership.teamID}`;
@@ -308,6 +313,14 @@ const shell = shellAPI.createShell({
   onLogin: shellAPI.createSession,
   onLogout: shellAPI.destroySession,
   renderView: async ({ state, setHeader, setMetrics, setPanels, renderEmpty, dataCard, actionButton, escapeHTML, formatDateTime, refresh }) => {
+    const refreshCurrentView = createStateRefresher({ refresh });
+    const updateDirectoryView = async (view, mode = "list", context = {}) => refreshCurrentView(() => {
+      if (mode === "list") {
+        resetDirectoryRoute(state, view);
+      } else {
+        setDirectoryRoute(state, view, mode, context);
+      }
+    });
     const [workspace, invitations, presence, adminSessions] = await Promise.all([
       loadWorkspace(),
       loadInvitations().catch(() => []),
@@ -397,19 +410,17 @@ const shell = shellAPI.createShell({
           backAction: 'data-action="teams-back"',
           content: `
             <form id="team-create-form" class="surface-stack">
-              <input id="team-name" class="shell-input" placeholder="Team name" required>
+              <input id="team-name" name="name" class="shell-input" placeholder="Team name" required>
               <div class="inline-actions">
                 <button class="shell-button" type="submit">Create team</button>
               </div>
             </form>
           `
         })]);
-        document.getElementById("team-create-form")?.addEventListener("submit", async (event) => {
-          event.preventDefault();
-          await requestJSON("/api/teams", { method: "POST", body: JSON.stringify({ name: document.getElementById("team-name").value }) });
-          resetDirectoryRoute(state, "teams");
-          await refresh();
-        });
+        bindFormSubmit("#view-content", "#team-create-form", async (formData) => {
+          await requestJSON("/api/teams", { method: "POST", body: JSON.stringify({ name: formData.get("name") }) });
+          await updateDirectoryView("teams");
+        }, "xgroup-team-create-submit");
       } else if (route.mode === "edit" && selectedTeam) {
         setPanels([crudFormPanel({
           span: "span-12",
@@ -419,29 +430,21 @@ const shell = shellAPI.createShell({
           backAction: 'data-action="teams-back"',
           content: `
             <form id="team-edit-form" class="surface-stack">
-              <input id="team-edit-name" class="shell-input" value="${escapeHTML(selectedTeam.name)}" required>
+              <input id="team-edit-name" name="name" class="shell-input" value="${escapeHTML(selectedTeam.name)}" required>
               <div class="inline-actions">
                 <button class="shell-button" type="submit">Save team</button>
-                <button id="team-delete-button" class="shell-button-danger" type="button">Delete team</button>
+                <button class="shell-button-danger" type="button" data-action="teams-delete-current">Delete team</button>
               </div>
             </form>
           `
         })]);
-        document.getElementById("team-edit-form")?.addEventListener("submit", async (event) => {
-          event.preventDefault();
+        bindFormSubmit("#view-content", "#team-edit-form", async (formData) => {
           await requestJSON(`/api/teams/${selectedTeam.id}`, {
             method: "PATCH",
-            body: JSON.stringify({ name: document.getElementById("team-edit-name").value })
+            body: JSON.stringify({ name: formData.get("name") })
           });
-          resetDirectoryRoute(state, "teams");
-          await refresh();
-        });
-        document.getElementById("team-delete-button")?.addEventListener("click", async () => {
-          if (!confirmDestructive(`Delete team "${selectedTeam.name}"? This only works when it has no active memberships.`)) return;
-          await requestJSON(`/api/teams/${selectedTeam.id}`, { method: "DELETE" });
-          resetDirectoryRoute(state, "teams");
-          await refresh();
-        });
+          await updateDirectoryView("teams");
+        }, "xgroup-team-edit-submit");
       } else {
         setPanels([crudListPanel({
           span: "span-12",
@@ -466,28 +469,27 @@ const shell = shellAPI.createShell({
         })]);
       }
 
-      document.getElementById("view-content")?.addEventListener("click", async (event) => {
-        const button = event.target.closest("[data-action]");
-        if (!button) return;
-        if (button.dataset.action === "teams-create-view") {
-          setDirectoryRoute(state, "teams", "create");
-          await refresh();
-        }
-        if (button.dataset.action === "teams-edit-view") {
-          setDirectoryRoute(state, "teams", "edit", { teamID: button.dataset.teamId });
-          await refresh();
-        }
-        if (button.dataset.action === "teams-back") {
-          resetDirectoryRoute(state, "teams");
-          await refresh();
-        }
-        if (button.dataset.action === "teams-delete") {
+      bindActions("#view-content", {
+        "teams-create-view": async () => {
+          await updateDirectoryView("teams", "create");
+        },
+        "teams-edit-view": async (button) => {
+          await updateDirectoryView("teams", "edit", { teamID: button.dataset.teamId });
+        },
+        "teams-back": async () => {
+          await updateDirectoryView("teams");
+        },
+        "teams-delete": async (button) => {
           if (!confirmDestructive(`Delete team "${button.dataset.teamName}"? This only works when it has no active memberships.`)) return;
           await requestJSON(`/api/teams/${button.dataset.teamId}`, { method: "DELETE" });
-          resetDirectoryRoute(state, "teams");
-          await refresh();
+          await updateDirectoryView("teams");
+        },
+        "teams-delete-current": async () => {
+          if (!confirmDestructive(`Delete team "${selectedTeam.name}"? This only works when it has no active memberships.`)) return;
+          await requestJSON(`/api/teams/${selectedTeam.id}`, { method: "DELETE" });
+          await updateDirectoryView("teams");
         }
-      }, { once: true });
+      }, "xgroup-teams");
       return;
     }
 
@@ -506,20 +508,20 @@ const shell = shellAPI.createShell({
           backAction: 'data-action="users-back"',
           content: `
             <form id="user-create-form" class="surface-stack">
-              <input id="user-first-name" class="shell-input" placeholder="First name" required>
-              <input id="user-last-name" class="shell-input" placeholder="Last name" required>
-              <input id="user-nickname" class="shell-input" placeholder="Nickname (optional)">
-              <input id="user-email" class="shell-input" type="email" placeholder="Email" required>
-              <input id="user-department" class="shell-input" placeholder="Department">
-              <input id="user-title" class="shell-input" placeholder="Role / title">
+              <input id="user-first-name" name="firstName" class="shell-input" placeholder="First name" required>
+              <input id="user-last-name" name="lastName" class="shell-input" placeholder="Last name" required>
+              <input id="user-nickname" name="nickname" class="shell-input" placeholder="Nickname (optional)">
+              <input id="user-email" name="email" class="shell-input" type="email" placeholder="Email" required>
+              <input id="user-department" name="department" class="shell-input" placeholder="Department">
+              <input id="user-title" name="title" class="shell-input" placeholder="Role / title">
               <input id="user-avatar" class="shell-input" type="file" accept="image/*">
-              <select id="user-manager" class="shell-select">${managerOptions(snapshot.users)}</select>
-              <select id="user-team" class="shell-select">${optionMarkup(snapshot.teams, (team) => team.id, (team) => team.name)}</select>
-              <select id="user-status" class="shell-select">
+              <select id="user-manager" name="managerUserID" class="shell-select">${managerOptions(snapshot.users)}</select>
+              <select id="user-team" name="teamID" class="shell-select">${optionMarkup(snapshot.teams, (team) => team.id, (team) => team.name)}</select>
+              <select id="user-status" name="status" class="shell-select">
                 <option value="active">active</option>
                 <option value="suspended">suspended</option>
               </select>
-              <select id="user-role" class="shell-select">
+              <select id="user-role" name="role" class="shell-select">
                 <option value="owner">owner</option>
                 <option value="admin">admin</option>
                 <option value="manager">manager</option>
@@ -532,28 +534,26 @@ const shell = shellAPI.createShell({
             </form>
           `
         })]);
-        document.getElementById("user-create-form")?.addEventListener("submit", async (event) => {
-          event.preventDefault();
+        bindFormSubmit("#view-content", "#user-create-form", async (formData) => {
           const avatarDataURL = await selectedAvatarDataURL("user-avatar");
           await requestJSON("/api/users", {
             method: "POST",
             body: JSON.stringify({
-              firstName: document.getElementById("user-first-name").value,
-              lastName: document.getElementById("user-last-name").value,
-              nickname: document.getElementById("user-nickname").value,
-              email: document.getElementById("user-email").value,
-              department: document.getElementById("user-department").value,
-              title: document.getElementById("user-title").value,
+              firstName: formData.get("firstName"),
+              lastName: formData.get("lastName"),
+              nickname: formData.get("nickname"),
+              email: formData.get("email"),
+              department: formData.get("department"),
+              title: formData.get("title"),
               avatarDataURL,
-              managerUserID: document.getElementById("user-manager").value || null,
-              teamID: document.getElementById("user-team").value,
-              status: document.getElementById("user-status").value,
-              role: document.getElementById("user-role").value
+              managerUserID: formData.get("managerUserID") || null,
+              teamID: formData.get("teamID"),
+              status: formData.get("status"),
+              role: formData.get("role")
             })
           });
-          resetDirectoryRoute(state, "users");
-          await refresh();
-        });
+          await updateDirectoryView("users");
+        }, "xgroup-user-create-submit");
       } else if (route.mode === "edit" && selectedUser) {
         setPanels([crudFormPanel({
           span: "span-12",
@@ -563,52 +563,44 @@ const shell = shellAPI.createShell({
           backAction: 'data-action="users-back"',
           content: `
             <form id="user-edit-form" class="surface-stack">
-              <input id="user-edit-first-name" class="shell-input" value="${escapeHTML(selectedUser.firstName || "")}" required>
-              <input id="user-edit-last-name" class="shell-input" value="${escapeHTML(selectedUser.lastName || "")}" required>
-              <input id="user-edit-nickname" class="shell-input" value="${escapeHTML(selectedUser.nickname || "")}" placeholder="Nickname (optional)">
-              <input id="user-edit-email" class="shell-input" type="email" value="${escapeHTML(selectedUser.email)}" required>
-              <input id="user-edit-department" class="shell-input" value="${escapeHTML(selectedUser.department || "")}" placeholder="Department">
-              <input id="user-edit-title" class="shell-input" value="${escapeHTML(selectedUser.title || "")}" placeholder="Role / title">
+              <input id="user-edit-first-name" name="firstName" class="shell-input" value="${escapeHTML(selectedUser.firstName || "")}" required>
+              <input id="user-edit-last-name" name="lastName" class="shell-input" value="${escapeHTML(selectedUser.lastName || "")}" required>
+              <input id="user-edit-nickname" name="nickname" class="shell-input" value="${escapeHTML(selectedUser.nickname || "")}" placeholder="Nickname (optional)">
+              <input id="user-edit-email" name="email" class="shell-input" type="email" value="${escapeHTML(selectedUser.email)}" required>
+              <input id="user-edit-department" name="department" class="shell-input" value="${escapeHTML(selectedUser.department || "")}" placeholder="Department">
+              <input id="user-edit-title" name="title" class="shell-input" value="${escapeHTML(selectedUser.title || "")}" placeholder="Role / title">
               <input id="user-edit-avatar" class="shell-input" type="file" accept="image/*">
-              <select id="user-edit-manager" class="shell-select">${managerOptions(snapshot.users.filter((user) => user.id !== selectedUser.id), selectedUser.managerUserID || "")}</select>
-              <select id="user-edit-status" class="shell-select">
+              <select id="user-edit-manager" name="managerUserID" class="shell-select">${managerOptions(snapshot.users.filter((user) => user.id !== selectedUser.id), selectedUser.managerUserID || "")}</select>
+              <select id="user-edit-status" name="status" class="shell-select">
                 <option value="active"${selectedUser.status === "active" ? " selected" : ""}>active</option>
                 <option value="suspended"${selectedUser.status === "suspended" ? " selected" : ""}>suspended</option>
               </select>
               <div class="inline-actions">
                 <button class="shell-button" type="submit">Save user</button>
-                <button id="user-delete-button" class="shell-button-danger" type="button">Delete user</button>
+                <button class="shell-button-danger" type="button" data-action="users-delete-current">Delete user</button>
               </div>
             </form>
           `
         })]);
-        document.getElementById("user-edit-form")?.addEventListener("submit", async (event) => {
-          event.preventDefault();
+        bindFormSubmit("#view-content", "#user-edit-form", async (formData) => {
           const avatarDataURL = await selectedAvatarDataURL("user-edit-avatar");
           const payload = {
-            firstName: document.getElementById("user-edit-first-name").value,
-            lastName: document.getElementById("user-edit-last-name").value,
-            nickname: document.getElementById("user-edit-nickname").value,
-            email: document.getElementById("user-edit-email").value,
-            department: document.getElementById("user-edit-department").value,
-            title: document.getElementById("user-edit-title").value,
-            managerUserID: document.getElementById("user-edit-manager").value || null,
-            status: document.getElementById("user-edit-status").value
+            firstName: formData.get("firstName"),
+            lastName: formData.get("lastName"),
+            nickname: formData.get("nickname"),
+            email: formData.get("email"),
+            department: formData.get("department"),
+            title: formData.get("title"),
+            managerUserID: formData.get("managerUserID") || null,
+            status: formData.get("status")
           };
           if (avatarDataURL !== undefined) payload.avatarDataURL = avatarDataURL;
           await requestJSON(`/api/users/${selectedUser.id}`, {
             method: "PATCH",
             body: JSON.stringify(payload)
           });
-          resetDirectoryRoute(state, "users");
-          await refresh();
-        });
-        document.getElementById("user-delete-button")?.addEventListener("click", async () => {
-          if (!confirmDestructive(`Delete user "${userFullName(selectedUser)}"?`)) return;
-          await requestJSON(`/api/users/${selectedUser.id}`, { method: "DELETE" });
-          resetDirectoryRoute(state, "users");
-          await refresh();
-        });
+          await updateDirectoryView("users");
+        }, "xgroup-user-edit-submit");
       } else {
         setPanels([crudListPanel({
           span: "span-12",
@@ -635,28 +627,27 @@ const shell = shellAPI.createShell({
         })]);
       }
 
-      document.getElementById("view-content")?.addEventListener("click", async (event) => {
-        const button = event.target.closest("[data-action]");
-        if (!button) return;
-        if (button.dataset.action === "users-create-view") {
-          setDirectoryRoute(state, "users", "create");
-          await refresh();
-        }
-        if (button.dataset.action === "users-edit-view") {
-          setDirectoryRoute(state, "users", "edit", { userID: button.dataset.userId });
-          await refresh();
-        }
-        if (button.dataset.action === "users-back") {
-          resetDirectoryRoute(state, "users");
-          await refresh();
-        }
-        if (button.dataset.action === "users-delete") {
+      bindActions("#view-content", {
+        "users-create-view": async () => {
+          await updateDirectoryView("users", "create");
+        },
+        "users-edit-view": async (button) => {
+          await updateDirectoryView("users", "edit", { userID: button.dataset.userId });
+        },
+        "users-back": async () => {
+          await updateDirectoryView("users");
+        },
+        "users-delete": async (button) => {
           if (!confirmDestructive(`Delete user "${button.dataset.userName}"?`)) return;
           await requestJSON(`/api/users/${button.dataset.userId}`, { method: "DELETE" });
-          resetDirectoryRoute(state, "users");
-          await refresh();
+          await updateDirectoryView("users");
+        },
+        "users-delete-current": async () => {
+          if (!confirmDestructive(`Delete user "${userFullName(selectedUser)}"?`)) return;
+          await requestJSON(`/api/users/${selectedUser.id}`, { method: "DELETE" });
+          await updateDirectoryView("users");
         }
-      }, { once: true });
+      }, "xgroup-users");
       return;
     }
 
@@ -702,32 +693,8 @@ const shell = shellAPI.createShell({
       ]);
       const orgTree = document.querySelector(".org-tree.horizontal");
       if (orgTree) {
-        let dragState = null;
-        const stopDrag = () => {
-          dragState = null;
-          orgTree.classList.remove("dragging");
+        const stopPan = () => {
           highlightHorizontalOrgTree(orgTree, selectedPath);
-        };
-        const handleTreeMouseDown = (event) => {
-          if (event.button !== 0) return;
-          if (
-            event.target.closest("button") ||
-            event.target.closest("[data-user-id]") ||
-            event.target.closest(".org-card")
-          ) return;
-          dragState = {
-            x: event.clientX,
-            y: event.clientY,
-            left: orgTree.scrollLeft,
-            top: orgTree.scrollTop
-          };
-          orgTree.classList.add("dragging");
-          event.preventDefault();
-        };
-        const handleMouseMove = (event) => {
-          if (!dragState) return;
-          orgTree.scrollLeft = dragState.left - (event.clientX - dragState.x);
-          orgTree.scrollTop = dragState.top - (event.clientY - dragState.y);
         };
         const handleScroll = () => {
           state.orgTreeScroll = {
@@ -736,27 +703,29 @@ const shell = shellAPI.createShell({
           };
           highlightHorizontalOrgTree(orgTree, selectedPath);
         };
-        const handleSelectMouseDown = async (event) => {
+        layoutHorizontalOrgTree(orgTree);
+        orgTree.scrollLeft = state.orgTreeScroll.left || 0;
+        orgTree.scrollTop = state.orgTreeScroll.top || 0;
+        highlightHorizontalOrgTree(orgTree, selectedPath);
+        const cleanupPan = bindPannableScroll(orgTree, {
+          shouldStart: (event) => !(
+            event.target.closest("button") ||
+            event.target.closest("[data-user-id]") ||
+            event.target.closest(".org-card")
+          ),
+          onScroll: handleScroll,
+          onPanEnd: stopPan
+        }, "xgroup-org-pan");
+        const cleanupSelect = bindDelegatedEvent("#view-content", "mousedown", '[data-action="select-org-user"]', async (card, event) => {
           if (event.button !== 0) return;
           if (event.target.closest("button")) return;
-          const card = event.target.closest('[data-action="select-org-user"]');
-          if (!card) return;
           state.orgTreeScroll = {
             left: orgTree.scrollLeft,
             top: orgTree.scrollTop
           };
           state.selectedOrgUserID = card.dataset.userId;
           await refresh();
-        };
-        layoutHorizontalOrgTree(orgTree);
-        orgTree.scrollLeft = state.orgTreeScroll.left || 0;
-        orgTree.scrollTop = state.orgTreeScroll.top || 0;
-        highlightHorizontalOrgTree(orgTree, selectedPath);
-        orgTree.addEventListener("mousedown", handleTreeMouseDown);
-        window.addEventListener("mousemove", handleMouseMove);
-        window.addEventListener("mouseup", stopDrag);
-        orgTree.addEventListener("scroll", handleScroll, { passive: true });
-        document.getElementById("view-content")?.addEventListener("mousedown", handleSelectMouseDown);
+        }, "xgroup-org-select");
         window.requestAnimationFrame(() => {
           layoutHorizontalOrgTree(orgTree);
           orgTree.scrollLeft = state.orgTreeScroll.left || 0;
@@ -764,17 +733,12 @@ const shell = shellAPI.createShell({
           highlightHorizontalOrgTree(orgTree, selectedPath);
         });
         state.orgTreeCleanup = () => {
-          orgTree.removeEventListener("mousedown", handleTreeMouseDown);
-          window.removeEventListener("mousemove", handleMouseMove);
-          window.removeEventListener("mouseup", stopDrag);
-          orgTree.removeEventListener("scroll", handleScroll);
-          document.getElementById("view-content")?.removeEventListener("mousedown", handleSelectMouseDown);
+          cleanupPan();
+          cleanupSelect();
         };
       }
-      document.getElementById("view-content")?.addEventListener("click", async (event) => {
-        const button = event.target.closest("[data-action]");
-        if (!button) return;
-        if (button.dataset.action === "toggle-org-node") {
+      bindActions("#view-content", {
+        "toggle-org-node": async (button) => {
           state.orgTreeScroll = {
             left: document.querySelector(".org-tree.horizontal")?.scrollLeft || 0,
             top: document.querySelector(".org-tree.horizontal")?.scrollTop || 0
@@ -786,36 +750,32 @@ const shell = shellAPI.createShell({
             state.collapsedOrgNodes.add(userID);
           }
           await refresh();
-          return;
-        }
-        if (button.dataset.action === "expand-all-org") {
+        },
+        "expand-all-org": async () => {
           state.orgTreeScroll = {
             left: document.querySelector(".org-tree.horizontal")?.scrollLeft || 0,
             top: document.querySelector(".org-tree.horizontal")?.scrollTop || 0
           };
           state.collapsedOrgNodes.clear();
           await refresh();
-          return;
-        }
-        if (button.dataset.action === "collapse-all-org") {
+        },
+        "collapse-all-org": async () => {
           state.orgTreeScroll = {
             left: document.querySelector(".org-tree.horizontal")?.scrollLeft || 0,
             top: document.querySelector(".org-tree.horizontal")?.scrollTop || 0
           };
           state.collapsedOrgNodes = new Set(branchIDs);
           await refresh();
-          return;
-        }
-        if (button.dataset.action === "org-layout-horizontal") {
+        },
+        "org-layout-horizontal": async () => {
           state.orgTreeScroll = {
             left: document.querySelector(".org-tree.horizontal, .org-tree.vertical")?.scrollLeft || 0,
             top: document.querySelector(".org-tree.horizontal, .org-tree.vertical")?.scrollTop || 0
           };
           state.orgChartLayout = "horizontal";
           await refresh();
-          return;
-        }
-        if (button.dataset.action === "org-layout-vertical") {
+        },
+        "org-layout-vertical": async () => {
           state.orgTreeScroll = {
             left: document.querySelector(".org-tree.horizontal, .org-tree.vertical")?.scrollLeft || 0,
             top: document.querySelector(".org-tree.horizontal, .org-tree.vertical")?.scrollTop || 0
@@ -823,7 +783,7 @@ const shell = shellAPI.createShell({
           state.orgChartLayout = "vertical";
           await refresh();
         }
-      }, { once: true });
+      }, "xgroup-structure");
       return;
     }
 
@@ -844,9 +804,9 @@ const shell = shellAPI.createShell({
           backAction: 'data-action="memberships-back"',
           content: `
             <form id="membership-create-form" class="surface-stack">
-              <select id="membership-user" class="shell-select">${optionMarkup(snapshot.users, (user) => user.id, (user) => user.displayName)}</select>
-              <select id="membership-team" class="shell-select">${optionMarkup(snapshot.teams, (team) => team.id, (team) => team.name)}</select>
-              <select id="membership-role" class="shell-select">
+              <select id="membership-user" name="userID" class="shell-select">${optionMarkup(snapshot.users, (user) => user.id, (user) => user.displayName)}</select>
+              <select id="membership-team" name="teamID" class="shell-select">${optionMarkup(snapshot.teams, (team) => team.id, (team) => team.name)}</select>
+              <select id="membership-role" name="role" class="shell-select">
                 <option value="owner">owner</option>
                 <option value="admin">admin</option>
                 <option value="manager">manager</option>
@@ -859,19 +819,17 @@ const shell = shellAPI.createShell({
             </form>
           `
         })]);
-        document.getElementById("membership-create-form")?.addEventListener("submit", async (event) => {
-          event.preventDefault();
+        bindFormSubmit("#view-content", "#membership-create-form", async (formData) => {
           await requestJSON("/api/memberships", {
             method: "POST",
             body: JSON.stringify({
-              userID: document.getElementById("membership-user").value,
-              teamID: document.getElementById("membership-team").value,
-              role: document.getElementById("membership-role").value
+              userID: formData.get("userID"),
+              teamID: formData.get("teamID"),
+              role: formData.get("role")
             })
           });
-          resetDirectoryRoute(state, "memberships");
-          await refresh();
-        });
+          await updateDirectoryView("memberships");
+        }, "xgroup-membership-create-submit");
       } else if (route.mode === "edit" && selectedMembership) {
         const membershipUser = snapshot.users.find((item) => item.id === selectedMembership.userID);
         const membershipTeam = snapshot.teams.find((item) => item.id === selectedMembership.teamID);
@@ -883,7 +841,7 @@ const shell = shellAPI.createShell({
           backAction: 'data-action="memberships-back"',
           content: `
             <form id="membership-edit-form" class="surface-stack">
-              <select id="membership-edit-role" class="shell-select">
+              <select id="membership-edit-role" name="role" class="shell-select">
                 <option value="owner"${selectedMembership.role === "owner" ? " selected" : ""}>owner</option>
                 <option value="admin"${selectedMembership.role === "admin" ? " selected" : ""}>admin</option>
                 <option value="manager"${selectedMembership.role === "manager" ? " selected" : ""}>manager</option>
@@ -892,26 +850,18 @@ const shell = shellAPI.createShell({
               </select>
               <div class="inline-actions">
                 <button class="shell-button" type="submit">Save membership</button>
-                <button id="membership-delete-button" class="shell-button-danger" type="button">Delete membership</button>
+                <button class="shell-button-danger" type="button" data-action="memberships-delete-current">Delete membership</button>
               </div>
             </form>
           `
         })]);
-        document.getElementById("membership-edit-form")?.addEventListener("submit", async (event) => {
-          event.preventDefault();
+        bindFormSubmit("#view-content", "#membership-edit-form", async (formData) => {
           await requestJSON(`/api/memberships/${selectedMembership.userID}/${selectedMembership.teamID}`, {
             method: "PATCH",
-            body: JSON.stringify({ role: document.getElementById("membership-edit-role").value })
+            body: JSON.stringify({ role: formData.get("role") })
           });
-          resetDirectoryRoute(state, "memberships");
-          await refresh();
-        });
-        document.getElementById("membership-delete-button")?.addEventListener("click", async () => {
-          if (!confirmDestructive(`Delete membership "${membershipUser?.displayName || selectedMembership.userID} → ${membershipTeam?.name || selectedMembership.teamID}"?`)) return;
-          await requestJSON(`/api/memberships/${selectedMembership.userID}/${selectedMembership.teamID}`, { method: "DELETE" });
-          resetDirectoryRoute(state, "memberships");
-          await refresh();
-        });
+          await updateDirectoryView("memberships");
+        }, "xgroup-membership-edit-submit");
       } else {
         setPanels([crudListPanel({
           span: "span-12",
@@ -938,28 +888,27 @@ const shell = shellAPI.createShell({
         })]);
       }
 
-      document.getElementById("view-content")?.addEventListener("click", async (event) => {
-        const button = event.target.closest("[data-action]");
-        if (!button) return;
-        if (button.dataset.action === "memberships-create-view") {
-          setDirectoryRoute(state, "memberships", "create");
-          await refresh();
-        }
-        if (button.dataset.action === "memberships-edit-view") {
-          setDirectoryRoute(state, "memberships", "edit", { membershipID: button.dataset.membershipId });
-          await refresh();
-        }
-        if (button.dataset.action === "memberships-back") {
-          resetDirectoryRoute(state, "memberships");
-          await refresh();
-        }
-        if (button.dataset.action === "memberships-delete") {
+      bindActions("#view-content", {
+        "memberships-create-view": async () => {
+          await updateDirectoryView("memberships", "create");
+        },
+        "memberships-edit-view": async (button) => {
+          await updateDirectoryView("memberships", "edit", { membershipID: button.dataset.membershipId });
+        },
+        "memberships-back": async () => {
+          await updateDirectoryView("memberships");
+        },
+        "memberships-delete": async (button) => {
           if (!confirmDestructive(`Delete membership "${button.dataset.membershipName}"?`)) return;
           await requestJSON(`/api/memberships/${button.dataset.userId}/${button.dataset.teamId}`, { method: "DELETE" });
-          resetDirectoryRoute(state, "memberships");
-          await refresh();
+          await updateDirectoryView("memberships");
+        },
+        "memberships-delete-current": async () => {
+          if (!confirmDestructive(`Delete membership "${membershipUser?.displayName || selectedMembership.userID} → ${membershipTeam?.name || selectedMembership.teamID}"?`)) return;
+          await requestJSON(`/api/memberships/${selectedMembership.userID}/${selectedMembership.teamID}`, { method: "DELETE" });
+          await updateDirectoryView("memberships");
         }
-      }, { once: true });
+      }, "xgroup-memberships");
       return;
     }
 
@@ -977,10 +926,10 @@ const shell = shellAPI.createShell({
           backAction: 'data-action="invitations-back"',
           content: `
             <form id="invitation-form" class="surface-stack">
-              <input id="invitation-name" class="shell-input" placeholder="Display name" required>
-              <input id="invitation-email" class="shell-input" type="email" placeholder="Email" required>
-              <select id="invitation-team" class="shell-select">${optionMarkup(snapshot.teams, (team) => team.id, (team) => team.name)}</select>
-              <select id="invitation-role" class="shell-select">
+              <input id="invitation-name" name="displayName" class="shell-input" placeholder="Display name" required>
+              <input id="invitation-email" name="email" class="shell-input" type="email" placeholder="Email" required>
+              <select id="invitation-team" name="teamID" class="shell-select">${optionMarkup(snapshot.teams, (team) => team.id, (team) => team.name)}</select>
+              <select id="invitation-role" name="role" class="shell-select">
                 <option value="owner">owner</option>
                 <option value="admin">admin</option>
                 <option value="manager">manager</option>
@@ -993,20 +942,18 @@ const shell = shellAPI.createShell({
             </form>
           `
         })]);
-        document.getElementById("invitation-form")?.addEventListener("submit", async (event) => {
-          event.preventDefault();
+        bindFormSubmit("#view-content", "#invitation-form", async (formData) => {
           await requestJSON("/api/invitations", {
             method: "POST",
             body: JSON.stringify({
-              displayName: document.getElementById("invitation-name").value,
-              email: document.getElementById("invitation-email").value,
-              teamID: document.getElementById("invitation-team").value,
-              role: document.getElementById("invitation-role").value
+              displayName: formData.get("displayName"),
+              email: formData.get("email"),
+              teamID: formData.get("teamID"),
+              role: formData.get("role")
             })
           });
-          resetDirectoryRoute(state, "invitations");
-          await refresh();
-        });
+          await updateDirectoryView("invitations");
+        }, "xgroup-invitation-create-submit");
       } else {
         setPanels([crudListPanel({
           span: "span-12",
@@ -1034,29 +981,23 @@ const shell = shellAPI.createShell({
         })]);
       }
 
-      document.getElementById("view-content")?.addEventListener("click", async (event) => {
-        const button = event.target.closest("[data-action]");
-        if (!button) return;
-        if (button.dataset.action === "invitations-create-view") {
-          setDirectoryRoute(state, "invitations", "create");
-          await refresh();
-        }
-        if (button.dataset.action === "invitations-back") {
-          resetDirectoryRoute(state, "invitations");
-          await refresh();
-        }
-        if (button.dataset.action === "accept-invitation") {
+      bindActions("#view-content", {
+        "invitations-create-view": async () => {
+          await updateDirectoryView("invitations", "create");
+        },
+        "invitations-back": async () => {
+          await updateDirectoryView("invitations");
+        },
+        "accept-invitation": async (button) => {
           await requestJSON(`/api/invitations/${button.dataset.invitationId}/accept`, { method: "POST", body: JSON.stringify({}) });
-          resetDirectoryRoute(state, "invitations");
-          await refresh();
-        }
-        if (button.dataset.action === "revoke-invitation") {
+          await updateDirectoryView("invitations");
+        },
+        "revoke-invitation": async (button) => {
           if (!confirmDestructive("Revoke this invitation?")) return;
           await requestJSON(`/api/invitations/${button.dataset.invitationId}/revoke`, { method: "POST", body: JSON.stringify({}) });
-          resetDirectoryRoute(state, "invitations");
-          await refresh();
+          await updateDirectoryView("invitations");
         }
-      }, { once: true });
+      }, "xgroup-invitations");
       return;
     }
 
@@ -1084,17 +1025,16 @@ const shell = shellAPI.createShell({
         }
       ]);
 
-      document.getElementById("view-content")?.addEventListener("click", async (event) => {
-        const button = event.target.closest("[data-action]");
-        if (!button) return;
-        if (button.dataset.action === "revoke-session") {
+      bindActions("#view-content", {
+        "revoke-session": async (button) => {
           await requestJSON(`/api/admin/sessions/${button.dataset.token}`, { method: "DELETE" });
-        }
-        if (button.dataset.action === "revoke-user-sessions") {
+          await refresh();
+        },
+        "revoke-user-sessions": async (button) => {
           await requestJSON(`/api/admin/users/${button.dataset.userId}/sessions`, { method: "DELETE" });
+          await refresh();
         }
-        await refresh();
-      });
+      }, "xgroup-sessions");
     }
   }
 });

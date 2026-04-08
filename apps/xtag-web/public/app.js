@@ -3,6 +3,8 @@ const requestJSON = shellAPI.requestJSON;
 const viewPanel = shellAPI.viewPanel;
 const namedSection = shellAPI.namedSection;
 const bindActions = shellAPI.bindActions;
+const bindFormSubmit = shellAPI.bindFormSubmit;
+const createStateRefresher = shellAPI.createStateRefresher;
 
 async function fetchTags(query = "") {
   const search = query ? `?query=${encodeURIComponent(query)}` : "";
@@ -137,6 +139,13 @@ const shell = shellAPI.createShell({
 
     currentQuery = shellAPI.normalizeTag(currentQuery);
     tagQueryRouter.sync(currentQuery);
+    const refreshTagState = createStateRefresher({
+      refresh,
+      sync: () => {
+        currentQuery = shellAPI.normalizeTag(currentQuery);
+        tagQueryRouter.sync(currentQuery);
+      }
+    });
     const payload = await fetchTags(currentQuery);
     const mergeSuggestions = similarTagSuggestions(payload.tags, payload.aliases);
     setHeader("Tag Search", "Aggregate case-insensitive hashtag usage across conversations, tasks, and documentation.", payload.syncStatus.lastSyncSucceeded ? "Indexed" : "Sync pending");
@@ -162,7 +171,7 @@ const shell = shellAPI.createShell({
         copy: "Search accepts tags with or without a leading #. Matching is case insensitive.",
         html: `
           <form id="tag-search-form" class="tag-search-form">
-            <input id="tag-search-input" class="tag-search-input" type="search" placeholder="#platform, auth, release" value="${escapeHTML(currentQuery)}">
+            <input id="tag-search-input" name="query" class="tag-search-input" type="search" placeholder="#platform, auth, release" value="${escapeHTML(currentQuery)}">
             <button class="shell-button" type="submit">Search</button>
             <button class="shell-button-secondary" type="button" data-action="reindex-tags">Reindex</button>
           </form>
@@ -186,11 +195,11 @@ const shell = shellAPI.createShell({
         html: `
           <div class="tag-admin-grid">
             <form id="tag-alias-form" class="tag-search-form">
-              <select id="tag-alias-source" class="tag-search-input">
+              <select id="tag-alias-source" name="sourceTag" class="tag-search-input">
                 <option value="">Choose source tag</option>
                 ${payload.tags.map((tag) => `<option value="${escapeHTML(tag.tag)}">${escapeHTML(tag.displayTag)}</option>`).join("")}
               </select>
-              <input id="tag-alias-target" class="tag-search-input" type="search" placeholder="Canonical tag, e.g. #platform">
+              <input id="tag-alias-target" name="canonicalTag" class="tag-search-input" type="search" placeholder="Canonical tag, e.g. #platform">
               <button class="shell-button-secondary" type="submit">Merge tag</button>
             </form>
             <div class="row-list">
@@ -263,22 +272,22 @@ const shell = shellAPI.createShell({
       })
     ]);
 
-    document.getElementById("tag-search-form")?.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      currentQuery = document.getElementById("tag-search-input")?.value || "";
-      await refresh();
-    });
+    bindFormSubmit("#view-content", "#tag-search-form", async (formData) => {
+      await refreshTagState(() => {
+        currentQuery = formData.get("query") || "";
+      });
+    }, "xtag-search-submit");
 
     shellAPI.attachTagAutocomplete(document.getElementById("tag-search-input"));
 
-    document.getElementById("tag-alias-form")?.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const sourceTag = document.getElementById("tag-alias-source")?.value || "";
-      const canonicalTag = document.getElementById("tag-alias-target")?.value || "";
+    bindFormSubmit("#view-content", "#tag-alias-form", async (formData) => {
+      const sourceTag = formData.get("sourceTag") || "";
+      const canonicalTag = formData.get("canonicalTag") || "";
       await createAlias(sourceTag, canonicalTag);
-      currentQuery = shellAPI.normalizeTag(canonicalTag);
-      await refresh();
-    });
+      await refreshTagState(() => {
+        currentQuery = canonicalTag;
+      });
+    }, "xtag-alias-submit");
 
     bindActions("#view-content", {
       "reindex-tags": async () => {
@@ -291,12 +300,14 @@ const shell = shellAPI.createShell({
       },
       "apply-suggestion": async (button) => {
         await createAlias(button.dataset.tag || "", button.dataset.canonicalTag || "");
-        currentQuery = button.dataset.canonicalTag || currentQuery;
-        await refresh();
+        await refreshTagState(() => {
+          currentQuery = button.dataset.canonicalTag || currentQuery;
+        });
       },
       "select-tag": async (button) => {
-        currentQuery = button.dataset.tag || "";
-        await refresh();
+        await refreshTagState(() => {
+          currentQuery = button.dataset.tag || "";
+        });
       }
     }, "xtag-actions");
   }

@@ -1,5 +1,9 @@
 const shellAPI = window.XHarborShell;
 const requestJSON = shellAPI.requestJSON;
+const bindActions = shellAPI.bindActions;
+const bindFormSubmit = shellAPI.bindFormSubmit;
+const createStateRefresher = shellAPI.createStateRefresher;
+const viewPanel = shellAPI.viewPanel;
 
 let docsCache = null;
 let selectedPageID = "";
@@ -111,19 +115,29 @@ function renderPageTree(nodes, depth = 0) {
       <div class="doc-tree-node" style="--doc-depth:${visualDepth}">
         <div class="doc-tree-row${node.id === selectedPageID ? " active" : ""}">
           ${childCount
-            ? `<button class="doc-tree-toggle${isExpanded ? " expanded" : ""}" type="button" data-toggle-page-id="${shellAPI.escapeHTML(node.id)}" aria-label="${isExpanded ? "Collapse" : "Expand"}">⌃</button>`
+            ? `<button class="doc-tree-toggle${isExpanded ? " expanded" : ""}" type="button" data-action="toggle-page-node" data-page-id="${shellAPI.escapeHTML(node.id)}" aria-label="${isExpanded ? "Collapse" : "Expand"}">⌃</button>`
             : `<span class="doc-tree-toggle-spacer"></span>`}
           <div class="doc-tree-item${node.id === selectedPageID ? " active" : ""}">
-            <button class="doc-tree-item-trigger" type="button" data-page-id="${shellAPI.escapeHTML(node.id)}">
+            <button class="doc-tree-item-trigger" type="button" data-action="select-page" data-page-id="${shellAPI.escapeHTML(node.id)}">
               <strong>${shellAPI.escapeHTML(node.title)}</strong>
             </button>
-            <button class="doc-tree-add" type="button" data-add-child-page-id="${shellAPI.escapeHTML(node.id)}" aria-label="Add article in this section" title="Add article"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+            <button class="doc-tree-add" type="button" data-action="create-child-page" data-page-id="${shellAPI.escapeHTML(node.id)}" aria-label="Add article in this section" title="Add article"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
           </div>
         </div>
         ${childCount && isExpanded ? `<div class="doc-tree-children">${renderPageTree(node.children || [], depth + 1)}</div>` : ""}
       </div>
     `;
   }).join("");
+}
+
+function renderDocModeActions(mode) {
+  return `
+    <div class="doc-mode-actions doc-mode-actions-floating">
+      <button class="doc-icon-button${mode === "preview" ? " active" : ""}" type="button" data-action="doc-set-mode" data-doc-mode="preview" aria-label="Preview document" title="Preview"><i class="fa-solid fa-eye" aria-hidden="true"></i></button>
+      <button class="doc-icon-button${mode === "edit" ? " active" : ""}" type="button" data-action="doc-set-mode" data-doc-mode="edit" aria-label="Edit document" title="Edit"><i class="fa-solid fa-pen" aria-hidden="true"></i></button>
+      <button class="doc-icon-button${mode === "history" ? " active" : ""}" type="button" data-action="doc-set-mode" data-doc-mode="history" aria-label="View history" title="History"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i></button>
+    </div>
+  `;
 }
 
 function escapeInline(text) {
@@ -312,6 +326,10 @@ const shell = shellAPI.createShell({
     }
 
     const docs = await fetchDocs();
+    const refreshDocState = createStateRefresher({
+      refresh,
+      sync: () => docRouter.sync({ pageID: selectedPageID, mode: docMode })
+    });
     const locationState = docRouter.read();
     if (locationState.pageID && docs.pages.some((page) => page.id === locationState.pageID)) {
       selectedPageID = locationState.pageID;
@@ -329,75 +347,17 @@ const shell = shellAPI.createShell({
     const pageSidebar = `
       <aside class="doc-sidebar">
         <div class="doc-inline-actions">
-          <button id="new-root-page" class="doc-icon-button" type="button" aria-label="New root page" title="New root page"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+          <button class="doc-icon-button" type="button" data-action="create-root-page" aria-label="New root page" title="New root page"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
         </div>
         <div class="doc-tree">${renderPageTree(docs.tree)}</div>
       </aside>
     `;
 
-    function attachPageActions() {
-      document.querySelectorAll("[data-page-id]").forEach((button) => {
-        button.addEventListener("click", async () => {
-          selectedPageID = button.dataset.pageId;
-          docMode = "preview";
-          ensureExpandedPath(selectedPageID);
-          docRouter.sync({ pageID: selectedPageID, mode: docMode });
-          await refresh();
-        });
-      });
-
-      document.querySelectorAll("[data-toggle-page-id]").forEach((button) => {
-        button.addEventListener("click", async (event) => {
-          event.stopPropagation();
-          const pageID = button.dataset.togglePageId;
-          if (expandedPageIDs.has(pageID)) {
-            expandedPageIDs.delete(pageID);
-          } else {
-            expandedPageIDs.add(pageID);
-          }
-          await refresh();
-        });
-      });
-
-      document.querySelectorAll("[data-add-child-page-id]").forEach((button) => {
-        button.addEventListener("click", async (event) => {
-          event.stopPropagation();
-          const parentPageID = button.dataset.addChildPageId;
-          const parent = docs.pages.find((item) => item.id === parentPageID);
-          const created = await createPage({
-            title: parent ? `${parent.title} Notes` : "Untitled Page",
-            parentPageID,
-            content: parent ? `## ${parent.title} Notes\n` : "# Untitled Page\n",
-            summary: "Child page created."
-          });
-          selectedPageID = created.id;
-          docMode = "preview";
-          ensureExpandedPath(selectedPageID);
-          expandedPageIDs.add(parentPageID);
-          docRouter.sync({ pageID: selectedPageID, mode: docMode });
-          await refresh();
-        });
-      });
-
-      document.getElementById("new-root-page")?.addEventListener("click", async () => {
-        const created = await createPage({
-          title: "Untitled Page",
-          parentPageID: null,
-          content: "# Untitled Page\n",
-          summary: "Root page created."
-        });
-        selectedPageID = created.id;
-        docMode = "preview";
-        ensureExpandedPath(selectedPageID);
-        docRouter.sync({ pageID: selectedPageID, mode: docMode });
-        await refresh();
-      });
-    }
     docRouter.sync({ pageID: selectedPageID, mode: docMode });
     setMetrics([]);
     setHeader("", "", "", { hidden: true });
     setPanels([
-      {
+      viewPanel({
         span: "span-12",
         className: "panel-bare",
         html: `
@@ -408,11 +368,7 @@ const shell = shellAPI.createShell({
                 ${docMode === "preview" ? `
                   <div class="doc-main-grid">
                     <article class="doc-preview-body">
-                      <div class="doc-mode-actions doc-mode-actions-floating">
-                        <button id="doc-preview-mode" class="doc-icon-button${docMode === "preview" ? " active" : ""}" type="button" aria-label="Preview document" title="Preview"><i class="fa-solid fa-eye" aria-hidden="true"></i></button>
-                        <button id="doc-edit-mode" class="doc-icon-button${docMode === "edit" ? " active" : ""}" type="button" aria-label="Edit document" title="Edit"><i class="fa-solid fa-pen" aria-hidden="true"></i></button>
-                        <button id="doc-history-mode" class="doc-icon-button${docMode === "history" ? " active" : ""}" type="button" aria-label="View history" title="History"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i></button>
-                      </div>
+                      ${renderDocModeActions(docMode)}
                       ${page ? `
                         <div class="doc-page-heading">
                           <h1>${escapeHTML(page.title)}</h1>
@@ -437,11 +393,7 @@ const shell = shellAPI.createShell({
                     <div class="doc-editor">
                       ${page ? `
                         <form id="page-editor" class="doc-field">
-                          <div class="doc-mode-actions doc-mode-actions-floating">
-                            <button id="doc-preview-mode" class="doc-icon-button${docMode === "preview" ? " active" : ""}" type="button" aria-label="Preview document" title="Preview"><i class="fa-solid fa-eye" aria-hidden="true"></i></button>
-                            <button id="doc-edit-mode" class="doc-icon-button${docMode === "edit" ? " active" : ""}" type="button" aria-label="Edit document" title="Edit"><i class="fa-solid fa-pen" aria-hidden="true"></i></button>
-                            <button id="doc-history-mode" class="doc-icon-button${docMode === "history" ? " active" : ""}" type="button" aria-label="View history" title="History"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i></button>
-                          </div>
+                          ${renderDocModeActions(docMode)}
                           <label>Title
                             <input id="page-title" name="title" type="text" value="${escapeHTML(page.title)}" required>
                           </label>
@@ -478,11 +430,7 @@ const shell = shellAPI.createShell({
                   <div class="doc-main-grid">
                     <article class="doc-revision-table">
                       ${page ? `
-                        <div class="doc-mode-actions doc-mode-actions-floating">
-                          <button id="doc-preview-mode" class="doc-icon-button${docMode === "preview" ? " active" : ""}" type="button" aria-label="Preview document" title="Preview"><i class="fa-solid fa-eye" aria-hidden="true"></i></button>
-                          <button id="doc-edit-mode" class="doc-icon-button${docMode === "edit" ? " active" : ""}" type="button" aria-label="Edit document" title="Edit"><i class="fa-solid fa-pen" aria-hidden="true"></i></button>
-                          <button id="doc-history-mode" class="doc-icon-button${docMode === "history" ? " active" : ""}" type="button" aria-label="View history" title="History"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i></button>
-                        </div>
+                        ${renderDocModeActions(docMode)}
                         ${revisionTable(pageRevisions, formatDateTime)}
                       ` : renderEmpty("No page selected", "Select a page to inspect its revision history.")}
                     </article>
@@ -502,42 +450,76 @@ const shell = shellAPI.createShell({
             </section>
           </div>
         `
-      }
+      })
     ]);
 
-    attachPageActions();
+    bindActions("#view-content", {
+      "select-page": async (button) => {
+        await refreshDocState(() => {
+          selectedPageID = button.dataset.pageId;
+          docMode = "preview";
+          ensureExpandedPath(selectedPageID);
+        });
+      },
+      "toggle-page-node": async (button, event) => {
+        event.stopPropagation();
+        const pageID = button.dataset.pageId;
+        if (expandedPageIDs.has(pageID)) {
+          expandedPageIDs.delete(pageID);
+        } else {
+          expandedPageIDs.add(pageID);
+        }
+        await refresh();
+      },
+      "create-child-page": async (button, event) => {
+        event.stopPropagation();
+        const parentPageID = button.dataset.pageId;
+        const parent = docs.pages.find((item) => item.id === parentPageID);
+        const created = await createPage({
+          title: parent ? `${parent.title} Notes` : "Untitled Page",
+          parentPageID,
+          content: parent ? `## ${parent.title} Notes\n` : "# Untitled Page\n",
+          summary: "Child page created."
+        });
+        await refreshDocState(() => {
+          selectedPageID = created.id;
+          docMode = "preview";
+          ensureExpandedPath(selectedPageID);
+          expandedPageIDs.add(parentPageID);
+        });
+      },
+      "create-root-page": async () => {
+        const created = await createPage({
+          title: "Untitled Page",
+          parentPageID: null,
+          content: "# Untitled Page\n",
+          summary: "Root page created."
+        });
+        await refreshDocState(() => {
+          selectedPageID = created.id;
+          docMode = "preview";
+          ensureExpandedPath(selectedPageID);
+        });
+      },
+      "doc-set-mode": async (button) => {
+        await refreshDocState(() => {
+          docMode = button.dataset.docMode || "preview";
+        });
+      }
+    }, "xdoc-actions");
 
-    document.getElementById("doc-preview-mode")?.addEventListener("click", async () => {
-      docMode = "preview";
-      docRouter.sync({ pageID: selectedPageID, mode: docMode });
-      await refresh();
-    });
-
-    document.getElementById("doc-edit-mode")?.addEventListener("click", async () => {
-      docMode = "edit";
-      docRouter.sync({ pageID: selectedPageID, mode: docMode });
-      await refresh();
-    });
-
-    document.getElementById("doc-history-mode")?.addEventListener("click", async () => {
-      docMode = "history";
-      docRouter.sync({ pageID: selectedPageID, mode: docMode });
-      await refresh();
-    });
-
-    document.getElementById("page-editor")?.addEventListener("submit", async (event) => {
-      event.preventDefault();
+    bindFormSubmit("#view-content", "#page-editor", async (formData) => {
       if (!page) return;
-      const form = new FormData(event.currentTarget);
       await updatePage(page.id, {
-        title: form.get("title"),
-        parentPageID: form.get("parentPageID") || null,
-        content: form.get("content"),
-        summary: form.get("summary")
+        title: formData.get("title"),
+        parentPageID: formData.get("parentPageID") || null,
+        content: formData.get("content"),
+        summary: formData.get("summary")
       });
-      docMode = "preview";
-      await refresh();
-    });
+      await refreshDocState(() => {
+        docMode = "preview";
+      });
+    }, "xdoc-editor-submit");
 
     shellAPI.attachTagAutocomplete(document.getElementById("page-content"));
   }

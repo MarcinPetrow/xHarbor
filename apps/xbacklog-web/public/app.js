@@ -7,9 +7,13 @@ const crudListPanel = shellAPI.crudListPanel;
 const crudFormPanel = shellAPI.crudFormPanel;
 const crudSidePanel = shellAPI.crudSidePanel;
 const confirmDestructive = shellAPI.confirmDestructive;
+const bindActions = shellAPI.bindActions;
+const bindFormSubmit = shellAPI.bindFormSubmit;
+const bindControlInputs = shellAPI.bindControlInputs;
+const createStateRefresher = shellAPI.createStateRefresher;
+const bindDragDrop = shellAPI.bindDragDrop;
 
 let selectedTaskID = null;
-let draggedTaskID = null;
 const boardFilters = {
   projectID: "all",
   teamID: "all",
@@ -48,7 +52,7 @@ function userRef(user, fallback = "Unknown user") {
 
 function taskCard(task, projectName, assignee, active) {
   return `
-    <article class="task-card${active ? " active" : ""}" data-task-id="${task.id}" draggable="true">
+    <article class="task-card${active ? " active" : ""}" data-action="select-task-card" data-task-id="${task.id}" draggable="true">
       <h4>${shellAPI.renderTagText(task.title)}</h4>
       <p>${shellAPI.escapeHTML(projectName)} · ${userRef(assignee, "Unassigned")}</p>
       <small>${shellAPI.escapeHTML(task.status)}</small>
@@ -119,13 +123,21 @@ const shell = shellAPI.createShell({
 
     const payload = await fetchBacklog();
     const { workspace, projects, tasks, comments, syncStatus } = payload;
+    const refreshBacklogState = createStateRefresher({
+      refresh,
+      sync: () => backlogRouter.sync({
+        view: state.currentView,
+        taskID: selectedTaskID,
+        projectID: selectedProjectID
+      })
+    });
     const columns = [
       { id: "new", label: "New" },
       { id: "in_progress", label: "In Progress" },
       { id: "done", label: "Done" }
     ];
 
-    const selectedProjectID = projects.some((project) => project.id === locationState.projectID)
+    let selectedProjectID = projects.some((project) => project.id === locationState.projectID)
       ? locationState.projectID
       : projects[0]?.id ?? "";
     const selectedTaskFromLocation = tasks.some((task) => task.id === locationState.taskID)
@@ -146,8 +158,8 @@ const shell = shellAPI.createShell({
           backLabel: "Back to projects",
           content: `
             <form id="project-form" class="compact-stack">
-              <input id="project-name" class="shell-input" placeholder="Project name" required>
-              <select id="project-team" class="shell-select">
+              <input id="project-name" name="name" class="shell-input" placeholder="Project name" required>
+              <select id="project-team" name="teamID" class="shell-select">
                 ${workspace.teams.map((team) => `<option value="${escapeHTML(team.id)}">${escapeHTML(team.name)}</option>`).join("")}
               </select>
               <button class="shell-button" type="submit">Create project</button>
@@ -171,24 +183,26 @@ const shell = shellAPI.createShell({
         })
       ]);
 
-      document.getElementById("project-form")?.addEventListener("submit", async (event) => {
-        event.preventDefault();
+      bindFormSubmit("#view-content", "#project-form", async (formData) => {
         await requestJSON("/api/projects", {
           method: "POST",
           body: JSON.stringify({
-            name: document.getElementById("project-name").value,
-            teamID: document.getElementById("project-team").value
+            name: formData.get("name"),
+            teamID: formData.get("teamID")
           })
         });
-        state.currentView = "projects";
-        await refresh();
-      });
-      document.querySelector('[data-action="open-projects"]')?.addEventListener("click", async () => {
-        state.currentView = "projects";
-        backlogRouter.sync({ view: "projects" });
-        await refresh();
-      });
-      backlogRouter.sync({ view: "project-create" });
+        await refreshBacklogState(() => {
+          state.currentView = "projects";
+        });
+      }, "xbacklog-project-create-submit");
+      bindActions("#view-content", {
+        "open-projects": async () => {
+          await refreshBacklogState(() => {
+            state.currentView = "projects";
+          });
+        }
+      }, "xbacklog-project-create");
+      refreshBacklogState(() => {});
       return;
     }
 
@@ -206,13 +220,13 @@ const shell = shellAPI.createShell({
           backLabel: "Back to projects",
           content: selectedProject ? `
             <form id="project-edit-form" class="compact-stack">
-              <input id="project-edit-name" class="shell-input" value="${escapeHTML(selectedProject.name)}" required>
-              <select id="project-edit-team" class="shell-select">
+              <input id="project-edit-name" name="name" class="shell-input" value="${escapeHTML(selectedProject.name)}" required>
+              <select id="project-edit-team" name="teamID" class="shell-select">
                 ${workspace.teams.map((team) => `<option value="${escapeHTML(team.id)}"${team.id === selectedProject.teamID ? " selected" : ""}>${escapeHTML(team.name)}</option>`).join("")}
               </select>
               <div class="inline-actions">
                 <button class="shell-button" type="submit">Save project</button>
-                <button id="delete-project" class="shell-button-secondary" type="button">Delete project</button>
+                <button class="shell-button-secondary" type="button" data-action="delete-current-project">Delete project</button>
               </div>
             </form>
           ` : renderEmpty("Unknown project", "Return to the project catalog and pick another project.")
@@ -226,32 +240,33 @@ const shell = shellAPI.createShell({
           backLabel: "Back to projects"
         })
       ]);
-      document.getElementById("project-edit-form")?.addEventListener("submit", async (event) => {
-        event.preventDefault();
+      bindFormSubmit("#view-content", "#project-edit-form", async (formData) => {
         await requestJSON(`/api/projects/${selectedProjectID}`, {
           method: "PATCH",
           body: JSON.stringify({
-            name: document.getElementById("project-edit-name").value,
-            teamID: document.getElementById("project-edit-team").value
+            name: formData.get("name"),
+            teamID: formData.get("teamID")
           })
         });
-        state.currentView = "projects";
-        backlogRouter.sync({ view: "projects" });
-        await refresh();
-      });
-      document.getElementById("delete-project")?.addEventListener("click", async () => {
-        if (!confirmDestructive("Delete this project and all related tasks?")) return;
-        await requestJSON(`/api/projects/${selectedProjectID}`, { method: "DELETE" });
-        state.currentView = "projects";
-        backlogRouter.sync({ view: "projects" });
-        await refresh();
-      });
-      document.querySelector('[data-action="open-projects"]')?.addEventListener("click", async () => {
-        state.currentView = "projects";
-        backlogRouter.sync({ view: "projects" });
-        await refresh();
-      });
-      backlogRouter.sync({ view: "project-edit", projectID: selectedProjectID });
+        await refreshBacklogState(() => {
+          state.currentView = "projects";
+        });
+      }, "xbacklog-project-edit-submit");
+      bindActions("#view-content", {
+        "delete-current-project": async () => {
+          if (!confirmDestructive("Delete this project and all related tasks?")) return;
+          await requestJSON(`/api/projects/${selectedProjectID}`, { method: "DELETE" });
+          await refreshBacklogState(() => {
+            state.currentView = "projects";
+          });
+        },
+        "open-projects": async () => {
+          await refreshBacklogState(() => {
+            state.currentView = "projects";
+          });
+        }
+      }, "xbacklog-project-edit");
+      refreshBacklogState(() => {});
       return;
     }
 
@@ -278,8 +293,8 @@ const shell = shellAPI.createShell({
                     <div class="row-meta">
                       <span>${escapeHTML(`${projectTasks} tasks`)}</span>
                       <div class="inline-actions">
-                        <button class="shell-button-secondary" type="button" data-project-edit="${escapeHTML(project.id)}">Edit</button>
-                        <button class="shell-button-secondary" type="button" data-project-delete="${escapeHTML(project.id)}">Delete</button>
+                        <button class="shell-button-secondary" type="button" data-action="project-edit-view" data-project-id="${escapeHTML(project.id)}">Edit</button>
+                        <button class="shell-button-secondary" type="button" data-action="project-delete" data-project-id="${escapeHTML(project.id)}">Delete</button>
                       </div>
                     </div>
                   </article>
@@ -288,26 +303,26 @@ const shell = shellAPI.createShell({
             : renderEmpty("No projects", "Create the first project to begin planning.")
         })
       ]);
-      document.querySelector('[data-action="open-project-create"]')?.addEventListener("click", async () => {
-        state.currentView = "project-create";
-        backlogRouter.sync({ view: "project-create" });
-        await refresh();
-      });
-      document.querySelectorAll("[data-project-edit]").forEach((node) => {
-        node.addEventListener("click", async () => {
-          state.currentView = "project-edit";
-          backlogRouter.sync({ view: "project-edit", projectID: node.dataset.projectEdit });
-          await refresh();
-        });
-      });
-      document.querySelectorAll("[data-project-delete]").forEach((node) => {
-        node.addEventListener("click", async () => {
+      bindActions("#view-content", {
+        "open-project-create": async () => {
+          await refreshBacklogState(() => {
+            state.currentView = "project-create";
+          });
+        },
+        "project-edit-view": async (node) => {
+          await refreshBacklogState(() => {
+            state.currentView = "project-edit";
+            selectedTaskID = null;
+            selectedProjectID = node.dataset.projectId;
+          });
+        },
+        "project-delete": async (node) => {
           if (!confirmDestructive("Delete this project and all related tasks?")) return;
-          await requestJSON(`/api/projects/${node.dataset.projectDelete}`, { method: "DELETE" });
+          await requestJSON(`/api/projects/${node.dataset.projectId}`, { method: "DELETE" });
           await refresh();
-        });
-      });
-      backlogRouter.sync({ view: "projects" });
+        }
+      }, "xbacklog-projects");
+      refreshBacklogState(() => {});
       return;
     }
 
@@ -349,12 +364,12 @@ const shell = shellAPI.createShell({
           backLabel: "Back to board",
           content: `
             <form id="task-create-form" class="compact-stack">
-              <input id="task-title" class="shell-input" placeholder="Task title" required>
-              <textarea id="task-description" class="shell-textarea" placeholder="Description"></textarea>
-              <select id="task-project" class="shell-select">
+              <input id="task-title" name="title" class="shell-input" placeholder="Task title" required>
+              <textarea id="task-description" name="description" class="shell-textarea" placeholder="Description"></textarea>
+              <select id="task-project" name="projectID" class="shell-select">
                 ${projects.map((project) => `<option value="${escapeHTML(project.id)}">${escapeHTML(project.name)}</option>`).join("")}
               </select>
-              <select id="task-assignee" class="shell-select">
+              <select id="task-assignee" name="assigneeUserID" class="shell-select">
                 <option value="">Unassigned</option>
                 ${workspace.users.map((user) => `<option value="${escapeHTML(user.id)}">${escapeHTML(user.displayName)}</option>`).join("")}
               </select>
@@ -371,29 +386,31 @@ const shell = shellAPI.createShell({
           backLabel: "Back to board"
         })
       ]);
-      document.getElementById("task-create-form")?.addEventListener("submit", async (event) => {
-        event.preventDefault();
+      bindFormSubmit("#view-content", "#task-create-form", async (formData) => {
         const task = await requestJSON("/api/tasks", {
           method: "POST",
           body: JSON.stringify({
-            title: document.getElementById("task-title").value,
-            description: document.getElementById("task-description").value,
-            projectID: document.getElementById("task-project").value,
-            assigneeUserID: document.getElementById("task-assignee").value || null
+            title: formData.get("title"),
+            description: formData.get("description"),
+            projectID: formData.get("projectID"),
+            assigneeUserID: formData.get("assigneeUserID") || null
           })
         });
         selectedTaskID = task.id;
-        state.currentView = "task-edit";
-        backlogRouter.sync({ view: "task-edit", taskID: task.id });
-        await refresh();
-      });
-      document.querySelector('[data-action="open-board"]')?.addEventListener("click", async () => {
-        state.currentView = "board";
-        backlogRouter.sync({ view: "board" });
-        await refresh();
-      });
+        await refreshBacklogState(() => {
+          selectedTaskID = task.id;
+          state.currentView = "task-edit";
+        });
+      }, "xbacklog-task-create-submit");
+      bindActions("#view-content", {
+        "open-board": async () => {
+          await refreshBacklogState(() => {
+            state.currentView = "board";
+          });
+        }
+      }, "xbacklog-task-create");
       ["task-title", "task-description"].forEach((id) => shellAPI.attachTagAutocomplete(document.getElementById(id)));
-      backlogRouter.sync({ view: "task-create" });
+      refreshBacklogState(() => {});
       return;
     }
 
@@ -412,15 +429,15 @@ const shell = shellAPI.createShell({
           content: detail ? `
             <div class="detail-grid">
               <form id="task-detail-form" class="compact-stack">
-                <input id="detail-title" class="shell-input" value="${escapeHTML(detail.task.title)}" required>
-                <textarea id="detail-description" class="shell-textarea" placeholder="Description">${escapeHTML(detail.task.description || "")}</textarea>
-                <select id="detail-assignee" class="shell-select">
+                <input id="detail-title" name="title" class="shell-input" value="${escapeHTML(detail.task.title)}" required>
+                <textarea id="detail-description" name="description" class="shell-textarea" placeholder="Description">${escapeHTML(detail.task.description || "")}</textarea>
+                <select id="detail-assignee" name="assigneeUserID" class="shell-select">
                   <option value="">Unassigned</option>
                   ${workspace.users.map((user) => `<option value="${escapeHTML(user.id)}"${user.id === detail.task.assigneeUserID ? " selected" : ""}>${escapeHTML(user.displayName)}</option>`).join("")}
                 </select>
                 <div class="inline-actions">
                   <button class="shell-button" type="submit">Save task</button>
-                  <button id="delete-task" class="shell-button-secondary" type="button">Delete task</button>
+                  <button class="shell-button-secondary" type="button" data-action="delete-current-task">Delete task</button>
                 </div>
               </form>
 
@@ -456,7 +473,7 @@ const shell = shellAPI.createShell({
                 </div>
               </div>
               <form id="comment-form" class="compact-stack">
-                <textarea id="comment-body" class="shell-textarea" placeholder="Comment" required></textarea>
+                <textarea id="comment-body" name="body" class="shell-textarea" placeholder="Comment" required></textarea>
                 <button class="shell-button-secondary" type="submit">Add comment</button>
               </form>
             </div>
@@ -471,40 +488,40 @@ const shell = shellAPI.createShell({
           backLabel: "Back to board"
         })
       ]);
-      document.getElementById("task-detail-form")?.addEventListener("submit", async (event) => {
-        event.preventDefault();
+      bindFormSubmit("#view-content", "#task-detail-form", async (formData) => {
         await requestJSON(`/api/tasks/${selectedTaskFromLocation}`, {
           method: "PATCH",
           body: JSON.stringify({
-            title: document.getElementById("detail-title").value,
-            description: document.getElementById("detail-description").value,
-            assigneeUserID: document.getElementById("detail-assignee").value || null
+            title: formData.get("title"),
+            description: formData.get("description"),
+            assigneeUserID: formData.get("assigneeUserID") || null
           })
         });
         await refresh();
-      });
-      document.getElementById("delete-task")?.addEventListener("click", async () => {
-        if (!confirmDestructive("Delete this task and its comments?")) return;
-        await requestJSON(`/api/tasks/${selectedTaskFromLocation}`, { method: "DELETE" });
-        state.currentView = "board";
-        backlogRouter.sync({ view: "board" });
-        await refresh();
-      });
-      document.getElementById("comment-form")?.addEventListener("submit", async (event) => {
-        event.preventDefault();
+      }, "xbacklog-task-edit-submit");
+      bindFormSubmit("#view-content", "#comment-form", async (formData) => {
         await requestJSON(`/api/tasks/${selectedTaskFromLocation}/comments`, {
           method: "POST",
-          body: JSON.stringify({ body: document.getElementById("comment-body").value })
+          body: JSON.stringify({ body: formData.get("body") })
         });
         await refresh();
-      });
-      document.querySelector('[data-action="open-board"]')?.addEventListener("click", async () => {
-        state.currentView = "board";
-        backlogRouter.sync({ view: "board" });
-        await refresh();
-      });
+      }, "xbacklog-task-comment-submit");
+      bindActions("#view-content", {
+        "delete-current-task": async () => {
+          if (!confirmDestructive("Delete this task and its comments?")) return;
+          await requestJSON(`/api/tasks/${selectedTaskFromLocation}`, { method: "DELETE" });
+          await refreshBacklogState(() => {
+            state.currentView = "board";
+          });
+        },
+        "open-board": async () => {
+          await refreshBacklogState(() => {
+            state.currentView = "board";
+          });
+        }
+      }, "xbacklog-task-edit");
       ["detail-title", "detail-description", "comment-body"].forEach((id) => shellAPI.attachTagAutocomplete(document.getElementById(id)));
-      backlogRouter.sync({ view: "task-edit", taskID: selectedTaskFromLocation });
+      refreshBacklogState(() => {});
       return;
     }
 
@@ -513,7 +530,7 @@ const shell = shellAPI.createShell({
       selectedTaskID = locationState.taskID;
     }
     selectedTaskID = filteredTasks.some((task) => task.id === selectedTaskID) ? selectedTaskID : filteredTasks[0]?.id ?? null;
-    backlogRouter.sync({ view: state.currentView });
+    refreshBacklogState(() => {});
 
     setMetrics([
       { label: "New", value: filteredTasks.filter((task) => task.status === "new").length, meta: "Fresh work" },
@@ -529,7 +546,7 @@ const shell = shellAPI.createShell({
         html: `
           <div class="section-toolbar">
             <span class="muted">${escapeHTML(syncStatus.lastSyncAt ? `Last sync ${formatDateTime(syncStatus.lastSyncAt)}` : "No sync yet")}</span>
-            <button id="sync-button" class="shell-button-secondary" type="button">Sync from xGroup</button>
+            <button class="shell-button-secondary" type="button" data-action="sync-workspace">Sync from xGroup</button>
           </div>
           <div class="compact-stack">
             <div class="row-item single">
@@ -595,78 +612,88 @@ const shell = shellAPI.createShell({
       }
     ]);
 
-    document.getElementById("sync-button")?.addEventListener("click", async () => {
-      await syncWorkspace();
-      await refresh();
-    });
+    bindControlInputs("#view-content", [
+      {
+        selector: "#filter-project",
+        event: "change",
+        handler: async (node) => {
+          boardFilters.projectID = node.value;
+          await refresh();
+        }
+      },
+      {
+        selector: "#filter-team",
+        event: "change",
+        handler: async (node) => {
+          boardFilters.teamID = node.value;
+          await refresh();
+        }
+      },
+      {
+        selector: "#filter-assignee",
+        event: "change",
+        handler: async (node) => {
+          boardFilters.assigneeUserID = node.value;
+          await refresh();
+        }
+      },
+      {
+        selector: "#filter-query",
+        event: "input",
+        handler: async (node) => {
+          boardFilters.query = node.value;
+          await refresh();
+        }
+      }
+    ], "xbacklog-filters");
 
-    document.getElementById("filter-project")?.addEventListener("change", async (event) => {
-      boardFilters.projectID = event.target.value;
-      await refresh();
-    });
-    document.getElementById("filter-team")?.addEventListener("change", async (event) => {
-      boardFilters.teamID = event.target.value;
-      await refresh();
-    });
-    document.getElementById("filter-assignee")?.addEventListener("change", async (event) => {
-      boardFilters.assigneeUserID = event.target.value;
-      await refresh();
-    });
-    document.getElementById("filter-query")?.addEventListener("input", async (event) => {
-      boardFilters.query = event.target.value;
-      await refresh();
-    });
-
-    document.querySelector('[data-action="open-task-create"]')?.addEventListener("click", async () => {
-      state.currentView = "task-create";
-      backlogRouter.sync({ view: "task-create" });
-      await refresh();
-    });
-
-    document.querySelector('[data-action="open-task-edit"]')?.addEventListener("click", async () => {
-      if (!selectedTaskID) return;
-      state.currentView = "task-edit";
-      backlogRouter.sync({ view: "task-edit", taskID: selectedTaskID });
-      await refresh();
-    });
-
-    document.querySelectorAll(".task-card").forEach((cardNode) => {
-      cardNode.addEventListener("click", async () => {
-        selectedTaskID = cardNode.dataset.taskId;
-        state.currentView = "task-edit";
-        backlogRouter.sync({ view: "task-edit", taskID: selectedTaskID });
+    bindActions("#view-content", {
+      "sync-workspace": async () => {
+        await syncWorkspace();
         await refresh();
-      });
-      cardNode.addEventListener("dragstart", () => {
-        draggedTaskID = cardNode.dataset.taskId;
-      });
-      cardNode.addEventListener("dragend", () => {
-        draggedTaskID = null;
-        document.querySelectorAll(".board-column").forEach((column) => column.classList.remove("drop-target"));
-      });
-    });
-
-    document.querySelectorAll(".board-column").forEach((column) => {
-      column.addEventListener("dragover", (event) => {
-        event.preventDefault();
-        column.classList.add("drop-target");
-      });
-      column.addEventListener("dragleave", () => {
-        column.classList.remove("drop-target");
-      });
-      column.addEventListener("drop", async (event) => {
-        event.preventDefault();
-        column.classList.remove("drop-target");
-        if (!draggedTaskID) return;
-        await requestJSON(`/api/tasks/${draggedTaskID}/status`, {
-          method: "POST",
-          body: JSON.stringify({ status: column.dataset.status })
+      },
+      "open-task-create": async () => {
+        await refreshBacklogState(() => {
+          state.currentView = "task-create";
         });
-        selectedTaskID = draggedTaskID;
-        draggedTaskID = null;
+      },
+      "open-task-edit": async () => {
+        if (!selectedTaskID) return;
+        await refreshBacklogState(() => {
+          state.currentView = "task-edit";
+        });
+      },
+      "select-task-card": async (node) => {
+        await refreshBacklogState(() => {
+          selectedTaskID = node.dataset.taskId;
+          state.currentView = "task-edit";
+        });
+      }
+    }, "xbacklog-board");
+
+    bindDragDrop("#view-content", {
+      draggableSelector: ".task-card",
+      dropZoneSelector: ".board-column",
+      getPayload: (node) => node.dataset.taskId,
+      onDragEnd: () => {
+        document.querySelectorAll(".board-column").forEach((column) => column.classList.remove("drop-target"));
+      },
+      onDragOver: async (_payload, node) => {
+        node.classList.add("drop-target");
+      },
+      onDragLeave: async (_payload, node) => {
+        node.classList.remove("drop-target");
+      },
+      onDrop: async (taskID, node) => {
+        node.classList.remove("drop-target");
+        await requestJSON(`/api/tasks/${taskID}/status`, {
+          method: "POST",
+          body: JSON.stringify({ status: node.dataset.status })
+        });
+        selectedTaskID = taskID;
         await refresh();
-      });
-    });
+      }
+    }, "xbacklog-board-dnd");
 
     ["filter-query"].forEach((id) => shellAPI.attachTagAutocomplete(document.getElementById(id)));
   }

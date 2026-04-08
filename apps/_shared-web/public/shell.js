@@ -75,25 +75,198 @@
     };
   }
 
+  function bindDelegatedEvent(root, eventName, selector, handler, key = `${eventName}:${selector}`) {
+    const target = typeof root === "string" ? document.querySelector(root) : root;
+    if (!target) return () => {};
+    target.__xharborDelegatedListeners ??= new Map();
+    target.__xharborDelegatedListeners.get(key)?.();
+    const listener = async (event) => {
+      const node = event.target.closest(selector);
+      if (!node || !target.contains(node)) return;
+      await handler(node, event);
+    };
+    target.addEventListener(eventName, listener);
+    const cleanup = () => {
+      target.removeEventListener(eventName, listener);
+      target.__xharborDelegatedListeners?.delete(key);
+    };
+    target.__xharborDelegatedListeners.set(key, cleanup);
+    return cleanup;
+  }
+
   function bindActions(root, handlers = {}, key = "default") {
     const target = typeof root === "string" ? document.querySelector(root) : root;
     if (!target) return () => {};
-    target.__xharborActionDelegates ??= new Map();
-    target.__xharborActionDelegates.get(key)?.();
-    const listener = async (event) => {
-      const node = event.target.closest("[data-action]");
-      if (!node || !target.contains(node)) return;
+    return bindDelegatedEvent(target, "click", "[data-action]", async (node, event) => {
       const action = node.dataset.action;
-      const handler = handlers[action];
-      if (typeof handler !== "function") return;
-      await handler(node, event);
+      const actionHandler = handlers[action];
+      if (typeof actionHandler !== "function") return;
+      await actionHandler(node, event);
+    }, key);
+  }
+
+  function bindFormSubmit(root, selector, handler, key = `submit:${selector}`) {
+    return bindDelegatedEvent(root, "submit", selector, async (form, event) => {
+      event.preventDefault();
+      await handler(new FormData(form), form, event);
+    }, key);
+  }
+
+  function bindControlInputs(root, bindings = [], key = "controls") {
+    const cleanups = bindings.map((binding, index) => bindDelegatedEvent(
+      root,
+      binding.event || "input",
+      binding.selector,
+      async (node, event) => {
+        await binding.handler(node, event);
+      },
+      `${key}:${index}:${binding.event || "input"}:${binding.selector}`
+    ));
+    return () => cleanups.forEach((cleanup) => cleanup());
+  }
+
+  function createStateRefresher({ refresh, sync } = {}) {
+    return async (mutate) => {
+      if (typeof mutate === "function") {
+        await mutate();
+      }
+      if (typeof sync === "function") {
+        sync();
+      }
+      if (typeof refresh === "function") {
+        await refresh();
+      }
     };
-    target.addEventListener("click", listener);
+  }
+
+  function bindDragDrop(root, {
+    draggableSelector,
+    dropZoneSelector,
+    getPayload = (node) => node?.dataset?.id,
+    onDragStart,
+    onDragEnd,
+    onDragOver,
+    onDragLeave,
+    onDrop
+  } = {}, key = "dragdrop") {
+    const target = typeof root === "string" ? document.querySelector(root) : root;
+    if (!target) return () => {};
+    target.__xharborDragDropBindings ??= new Map();
+    target.__xharborDragDropBindings.get(key)?.();
+
+    let draggedPayload = null;
+
+    const handleDragStart = async (event) => {
+      const node = event.target.closest(draggableSelector);
+      if (!node || !target.contains(node)) return;
+      draggedPayload = await getPayload(node, event);
+      if (draggedPayload == null) return;
+      await onDragStart?.(draggedPayload, node, event);
+    };
+
+    const handleDragEnd = async (event) => {
+      const node = event.target.closest(draggableSelector);
+      if (!node || !target.contains(node)) return;
+      const payload = draggedPayload;
+      draggedPayload = null;
+      await onDragEnd?.(payload, node, event);
+    };
+
+    const handleDragOver = async (event) => {
+      const node = event.target.closest(dropZoneSelector);
+      if (!node || !target.contains(node) || draggedPayload == null) return;
+      event.preventDefault();
+      await onDragOver?.(draggedPayload, node, event);
+    };
+
+    const handleDragLeave = async (event) => {
+      const node = event.target.closest(dropZoneSelector);
+      if (!node || !target.contains(node)) return;
+      await onDragLeave?.(draggedPayload, node, event);
+    };
+
+    const handleDrop = async (event) => {
+      const node = event.target.closest(dropZoneSelector);
+      if (!node || !target.contains(node) || draggedPayload == null) return;
+      event.preventDefault();
+      const payload = draggedPayload;
+      draggedPayload = null;
+      await onDrop?.(payload, node, event);
+    };
+
+    target.addEventListener("dragstart", handleDragStart);
+    target.addEventListener("dragend", handleDragEnd);
+    target.addEventListener("dragover", handleDragOver);
+    target.addEventListener("dragleave", handleDragLeave);
+    target.addEventListener("drop", handleDrop);
+
     const cleanup = () => {
-      target.removeEventListener("click", listener);
-      target.__xharborActionDelegates?.delete(key);
+      target.removeEventListener("dragstart", handleDragStart);
+      target.removeEventListener("dragend", handleDragEnd);
+      target.removeEventListener("dragover", handleDragOver);
+      target.removeEventListener("dragleave", handleDragLeave);
+      target.removeEventListener("drop", handleDrop);
+      target.__xharborDragDropBindings?.delete(key);
     };
-    target.__xharborActionDelegates.set(key, cleanup);
+    target.__xharborDragDropBindings.set(key, cleanup);
+    return cleanup;
+  }
+
+  function bindPannableScroll(root, {
+    shouldStart,
+    onScroll,
+    onPanEnd
+  } = {}, key = "pannable") {
+    const target = typeof root === "string" ? document.querySelector(root) : root;
+    if (!target) return () => {};
+    target.__xharborPanBindings ??= new Map();
+    target.__xharborPanBindings.get(key)?.();
+
+    let dragState = null;
+
+    const handleMouseDown = (event) => {
+      if (event.button !== 0) return;
+      if (typeof shouldStart === "function" && !shouldStart(event, target)) return;
+      dragState = {
+        x: event.clientX,
+        y: event.clientY,
+        left: target.scrollLeft,
+        top: target.scrollTop
+      };
+      target.classList.add("dragging");
+      event.preventDefault();
+    };
+
+    const handleMouseMove = (event) => {
+      if (!dragState) return;
+      target.scrollLeft = dragState.left - (event.clientX - dragState.x);
+      target.scrollTop = dragState.top - (event.clientY - dragState.y);
+    };
+
+    const handleMouseUp = () => {
+      if (!dragState) return;
+      dragState = null;
+      target.classList.remove("dragging");
+      onPanEnd?.(target);
+    };
+
+    const handleScroll = (event) => {
+      onScroll?.(target, event);
+    };
+
+    target.addEventListener("mousedown", handleMouseDown);
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    target.addEventListener("scroll", handleScroll, { passive: true });
+
+    const cleanup = () => {
+      target.removeEventListener("mousedown", handleMouseDown);
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      target.removeEventListener("scroll", handleScroll);
+      target.__xharborPanBindings?.delete(key);
+    };
+    target.__xharborPanBindings.set(key, cleanup);
     return cleanup;
   }
 
@@ -1089,7 +1262,13 @@
     readLocationState,
     syncLocationState,
     createQueryRouter,
+    bindDelegatedEvent,
     bindActions,
+    bindFormSubmit,
+    bindControlInputs,
+    createStateRefresher,
+    bindDragDrop,
+    bindPannableScroll,
     buildTagSearchURL,
     renderTagText,
     renderAvatar,
