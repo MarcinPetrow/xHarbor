@@ -19,6 +19,50 @@ const sessionStore = new SessionStore(new URL("../../../data/sqlite/xharbor.db",
 let state = await stateStore.loadOr(createDemoBacklogState(createDemoWorkspace().snapshot));
 state.board.taskEvents ||= [];
 
+function projectCode(project) {
+  const name = String(project?.name || project?.id || "PRJ");
+  const wordInitials = (name.match(/[A-Za-z0-9]+/g) || []).map((token) => token[0]?.toUpperCase() || "").join("");
+  const fallbackChars = slugify(name).replace(/[^a-z0-9]/g, "").toUpperCase();
+  const base = `${wordInitials}${fallbackChars}`.replace(/[^A-Z0-9]/g, "");
+  return (base || "PRJ").padEnd(3, "X").slice(0, 3);
+}
+
+function nextTaskSequence(projectID) {
+  const project = findProject(projectID);
+  const code = projectCode(project || { id: projectID, name: projectID });
+  const used = state.board.tasks
+    .map((task) => task.key)
+    .filter((key) => typeof key === "string" && key.startsWith(`${code}-`))
+    .map((key) => Number.parseInt(key.split("-")[1], 10))
+    .filter((value) => Number.isFinite(value));
+  return (used.length ? Math.max(...used) : 0) + 1;
+}
+
+function buildTaskKey(projectID) {
+  const project = findProject(projectID);
+  const code = projectCode(project || { id: projectID, name: projectID });
+  const sequence = String(nextTaskSequence(projectID)).padStart(3, "0");
+  return `${code}-${sequence}`;
+}
+
+function ensureTaskKeys() {
+  const assigned = new Set();
+  let mutated = false;
+  const sorted = [...state.board.tasks].sort((left, right) => {
+    const byDate = String(left.createdAt || "").localeCompare(String(right.createdAt || ""));
+    if (byDate !== 0) return byDate;
+    return String(left.id || "").localeCompare(String(right.id || ""));
+  });
+  for (const task of sorted) {
+    if (!task.key || assigned.has(task.key)) {
+      task.key = buildTaskKey(task.projectID);
+      mutated = true;
+    }
+    assigned.add(task.key);
+  }
+  return mutated;
+}
+
 function json(response, statusCode, payload) {
   const body = JSON.stringify(payload, null, 2);
   response.writeHead(statusCode, {
@@ -90,6 +134,10 @@ function findTask(taskID) {
 
 function findProject(projectID) {
   return state.board.projects.find((item) => item.id === projectID) ?? null;
+}
+
+if (ensureTaskKeys()) {
+  await persist();
 }
 
 function deleteTask(taskID) {
@@ -230,6 +278,7 @@ const server = http.createServer(async (request, response) => {
       const now = new Date().toISOString();
       const task = {
         id: `task-${slugify(payload.title)}`,
+        key: buildTaskKey(payload.projectID),
         projectID: payload.projectID,
         title: payload.title,
         description: payload.description ?? "",
