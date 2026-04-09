@@ -245,6 +245,18 @@ function highlightHorizontalOrgTree(container, selectedIDs) {
   });
 }
 
+function centerHorizontalOrgTreeOnRoot(container) {
+  if (!container) return;
+  const rootCard = container.querySelector(".org-tree-level.root > .org-branch > .org-branch-node .org-card");
+  if (!rootCard) return;
+
+  const containerRect = container.getBoundingClientRect();
+  const rootRect = rootCard.getBoundingClientRect();
+  const targetLeft = rootRect.left - containerRect.left + container.scrollLeft - (container.clientWidth / 2) + (rootRect.width / 2);
+  container.scrollLeft = Math.max(0, Math.round(targetLeft));
+  container.scrollTop = 0;
+}
+
 function ensureDirectoryRoutes(state) {
   state.directoryRoutes ??= {};
   return state.directoryRoutes;
@@ -656,7 +668,7 @@ const shell = shellAPI.createShell({
       state.collapsedOrgNodes ??= new Set();
       state.orgChartLayout ??= "horizontal";
       state.selectedOrgUserID ??= "user-marcin";
-      state.orgTreeScroll ??= { left: 0, top: 0 };
+      state.orgTreeScroll ??= null;
       if (state.orgTreeCleanup) {
         state.orgTreeCleanup();
         state.orgTreeCleanup = null;
@@ -704,8 +716,16 @@ const shell = shellAPI.createShell({
           highlightHorizontalOrgTree(orgTree, selectedPath);
         };
         layoutHorizontalOrgTree(orgTree);
-        orgTree.scrollLeft = state.orgTreeScroll.left || 0;
-        orgTree.scrollTop = state.orgTreeScroll.top || 0;
+        if (state.orgTreeScroll) {
+          orgTree.scrollLeft = state.orgTreeScroll.left || 0;
+          orgTree.scrollTop = state.orgTreeScroll.top || 0;
+        } else {
+          centerHorizontalOrgTreeOnRoot(orgTree);
+          state.orgTreeScroll = {
+            left: orgTree.scrollLeft,
+            top: orgTree.scrollTop
+          };
+        }
         highlightHorizontalOrgTree(orgTree, selectedPath);
         const cleanupPan = bindPannableScroll(orgTree, {
           shouldStart: (event) => !(
@@ -728,8 +748,16 @@ const shell = shellAPI.createShell({
         }, "xgroup-org-select");
         window.requestAnimationFrame(() => {
           layoutHorizontalOrgTree(orgTree);
-          orgTree.scrollLeft = state.orgTreeScroll.left || 0;
-          orgTree.scrollTop = state.orgTreeScroll.top || 0;
+          if (state.orgTreeScroll) {
+            orgTree.scrollLeft = state.orgTreeScroll.left || 0;
+            orgTree.scrollTop = state.orgTreeScroll.top || 0;
+          } else {
+            centerHorizontalOrgTreeOnRoot(orgTree);
+            state.orgTreeScroll = {
+              left: orgTree.scrollLeft,
+              top: orgTree.scrollTop
+            };
+          }
           highlightHorizontalOrgTree(orgTree, selectedPath);
         });
         state.orgTreeCleanup = () => {

@@ -46,6 +46,8 @@ Generated images are written to:
 
 `docs/assets/screenshots/`
 
+Screenshots are intentionally captured in a consistent `16:9` frame so the wiki gallery stays visually aligned across modules.
+
 ## Repository structure
 
 - `apps/` contains all web apps, APIs, and the native `xtalk-macos` client

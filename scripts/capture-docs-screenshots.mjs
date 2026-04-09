@@ -32,7 +32,6 @@ const apps = [
     name: "xbacklog-board",
     url: "http://127.0.0.1:3001",
     afterLogin: async (page) => {
-      await page.click('[data-view-id="board"]');
       await page.waitForSelector(".board-columns");
     }
   },
@@ -40,7 +39,6 @@ const apps = [
     name: "xdashboard-overview",
     url: "http://127.0.0.1:3002",
     afterLogin: async (page) => {
-      await page.click('[data-view-id="overview"]');
       await page.waitForSelector(".content-panel");
     }
   },
@@ -95,18 +93,16 @@ async function ensureLogin(page) {
 
 async function captureApp(browser, app) {
   const page = await browser.newPage({
-    viewport: { width: 1600, height: 1080 },
+    viewport: { width: 1600, height: 900 },
     deviceScaleFactor: 1
   });
 
   try {
-    await page.goto(app.url, { waitUntil: "networkidle" });
+    await page.goto(app.url, { waitUntil: "load" });
     await ensureLogin(page);
     await app.afterLogin(page);
     await page.waitForTimeout(600);
-
-    const root = page.locator(".shell-root").first();
-    await root.screenshot({
+    await page.screenshot({
       path: path.join(outputDir, `${app.name}.png`)
     });
   } finally {
